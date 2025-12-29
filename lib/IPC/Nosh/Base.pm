@@ -1,8 +1,8 @@
 use Object::Pad ':experimental(:all)';
 
-package IPC::nosh::Common;
+package IPC::Nosh::Base;
 
-class IPC::nosh::Common;
+class IPC::Nosh::Base;
 
 use utf8;
 use v5.40;

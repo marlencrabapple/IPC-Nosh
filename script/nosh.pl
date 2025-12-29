@@ -14,7 +14,7 @@ use lib 'lib';
 use Getopt::Long
   qw(GetOptionsFromArray :config no_ignore_case auto_abbrev long_prefix_pattern=--?);
 
-use IPC::nosh;
+use IPC::Nosh;
 
 field $argv : param;
 
