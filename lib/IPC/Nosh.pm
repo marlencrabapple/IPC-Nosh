@@ -2,7 +2,7 @@ use Object::Pad ':experimental(:all)';
 
 package IPC::Nosh;
 
-class IPC::Nosh : isa(IPC::Nosh::Base);
+class IPC::Nosh : isa(IPC::Nosh::IO);
 
 our $VERSION = "0.01";
 
@@ -14,66 +14,118 @@ use v5.40;
 
 use IPC::Run3;
 use IO::Handle;
-use IPC::Nosh::Base;
+
+use IPC::Nosh::IO::Mux;
+use IPC::Nosh::IO;
 
 @EXPORT = qw($run run);
 
-field $cmd = __PACKAGE__;
+# field $cmd = __PACKAGE__;
 
-field $in  : param : mutator = \undef;
-field $out : param : mutator = [];
-field $err : param : mutator = [];
+# field $in  : param : mutator = \undef;
+# field $out : param : mutator = [];
+# field $err : param : mutator = [];
+# field %tie;
 
-field %handle = ( in => \$in, out => \$out, err => $err );
+field $in = \undef;
+field @out;
+field @err;
+field %tie;
+
+# field %handle = ( in => \$in, out => \$out, err => $err );
 
 ADJUST {
-    my class TieArrayStd {
-        use v5.40;
-        use Tie::Array;
+    # our $host = $self;
 
-        use vars '@ISA';
-        @ISA = qw(Tie::StdArray);
-
-        field $handle : param //= *STDOUT;
-        field $mode   : param //= 'w';
-        field $aref   : param = [];
-
-        ADJUST {
-            tie @$aref, 'Tie::StdArray';
-            $handle = IO::Handle->new_from_fd( fileno($handle), $mode );
-        }
-
-        method PUSH (@LIST) {
-            $self->writeh( $_, $handle ) for @LIST;
-            SUPER->PUSH( $self, @LIST );
-        }
-
-        method TIEARRAY { SUPER->TIEARRAY( $self, @_ ) }
-
-        method STORE ( $index, $value ) {
-
-            $self->writeh( $value, $handle );
-            SUPER->STORE( $index, $value );
-        }
-    };
-
-    TieArrayStd->new( aref => $out );
-    TieArrayStd->new( aref => $err, handle => *STDERR );
 }
 
 method $run ($cmd) {
-    run3( $cmd, $in, $out, $err );
+    my class IOMux {
+    #     use v5.40;
+    #     use Tie::Array;
+
+    #     use vars '@ISA';
+    #     @ISA = qw(Tie::StdArray);
+
+    #     field $index : param = 0;
+
+    #     #field $aref : param;
+    #     field $handle : param //= *STDOUT;
+    #     field $mode   : param //= 'w';
+
+    #     ADJUST {
+    #         #tie @$aref, 'Tie::StdArray';
+    #         $handle = IO::Handle->new_from_fd( fileno($handle), $mode );
+
+    #         # $self->TIEARRAY(@_);
+    #         $host->dmsg($self);
+    #     }
+
+    #     method PUSH (@LIST) {
+    #         writeh( $_, $handle ) for @LIST;
+
+    #         # TODO: benchmark against calling SUPER->PUSH for each elem
+    #         Tie::StdArray->PUSH( $self, map { chomp $_; $_ } @LIST );
+    #     }
+
+    #     method TIEARRAY : common (%opt) { $class->new(%opt) }
+
+    #     method STORE ( $index, $value ) {
+    #         writeh( $value, $handle );
+    #         Tie::StdArray->STORE( $index, map { chomp $_; $_ } $value );
+    #     }
+use v5.40;
+use utf8;
+
+use Tie::Array;
+use IPC::Nosh::IO;
+
+use vars qw'@ISA @EXPORT @EXPORT_OK';
+@ISA = qw'Tie::StdArray';
+
+method PUSH ( @LIST ) {
+    $self->{writeh}->( $_, $self->{handle} ) for @LIST;
+
+    # TODO: benchmark against calling SUPER->PUSH for each elem
+    Tie::StdArray->PUSH( $self, map { chomp $_; $_ } @LIST );
+}
+
+method STORE( $index, $value ) {
+    $self->{writeh}->teh( $value, $self->{handle} );
+    Tie::StdArray->STORE( $index, map { chomp $_; $_ } $value );
+}
+
+method TIEARRAY : common ( @list ) {
+    my $self = Tie::StdArray->TIEARRAY(@list);
+    dmsg( $self, $class, \@list );
+
+
+    # $$self{handle} = $opt{handle} // *STDOUT;
+    # $$self{mode}   = $opt{mode}   // 'w';
+
+$self
+}
+
+
+    };
+
+
+    $tie{out} = tie @out, 'IPC::Nosh::IO::Mux';
+    $tie{err} = tie @err, 'IPC::Nosh::IO::Mux', handle => *STDERR;
+
+    run3( $cmd, $in, \@out, \@err );
+    dmsg($self)
 }
 
 method run ( $cmd, %opt ) {
 
     # ( $in, $out, $err ) //= ( %opt[qw/in out err/] );
 
-    foreach my ($k)
-      ( grep { $opt{$_} && ref $opt{$_} } keys %opt{qw/in out err/} )
-    {
-        $self->$k = $opt{$k};
-    }
+    # foreach my ($k)
+    #   ( grep { $opt{$_} && ref $opt{$_} } keys %opt{qw/in out err/} )
+    # {
+    #     $self->$k = $opt{$k};
+    # }
 
     # my $self = $class->new( in => $_in, out => $_out, err => $_err );
     $self->$run($cmd);

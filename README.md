@@ -1,26 +1,22 @@
 # NAME
 
-IPC::Nosh - Blah blah blah
+IPC::Cmd - It's new $module
 
 # SYNOPSIS
 
-    use IPC::Nosh;
+    use IPC::Cmd;
 
 # DESCRIPTION
 
-IPC::Nosh is
-
-# AUTHOR
-
-Ian P Bradley <crabapp@hikki.tech>
-
-# COPYRIGHT
-
-Copyright 2025- Ian P Bradley
+IPC::Cmd is ...
 
 # LICENSE
+
+Copyright(C) Ian P Bradley .
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
-# SEE ALSO
+# AUTHOR
+
+Ian P Bradley <ian.bradley@studiocrabapple.com>

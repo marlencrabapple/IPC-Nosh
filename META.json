@@ -1,7 +1,7 @@
 {
-   "abstract" : "Blah blah blah",
+   "abstract" : "It's new $module",
    "author" : [
-      "Ian P Bradley <crabapp@hikki.tech>"
+      "Ian P Bradley <ian.bradley@studiocrabapple.com>"
    ],
    "dynamic_config" : 0,
    "generated_by" : "Dist::Milla version v1.0.22, Dist::Zilla version 6.036, CPAN::Meta::Converter version 2.150010",
@@ -67,9 +67,6 @@
    },
    "release_status" : "testing",
    "version" : "0.01",
-   "x_contributors" : [
-      "Ian P Bradley <ian.bradley@studiocrabapple.com>"
-   ],
    "x_generated_by_perl" : "v5.42.0",
    "x_serialization_backend" : "Cpanel::JSON::XS version 4.40",
    "x_spdx_expression" : "Artistic-1.0-Perl OR GPL-1.0-or-later",

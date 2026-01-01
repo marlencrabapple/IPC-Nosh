@@ -1,8 +1,8 @@
 use Object::Pad ':experimental(:all)';
 
-package IPC::Nosh::Base;
+package IPC::Nosh::IO;
 
-class IPC::Nosh::Base;
+class IPC::Nosh::IO;
 
 use utf8;
 use v5.40;
@@ -50,9 +50,10 @@ method info ($line) {
     $self->outh("▶ $line");
 }
 
-method dmsg (@data) {
-    my @caller = caller 0;
-    local $Data::Dumper::Names::UpLevel = 2;
+method dmsg {
+    return unless $debug;
+    my @caller = caller 1;
+    local $Data::Dumper::Names::UpLevel = 3;
 
     my $out;
     $out .= Dumper(@_);

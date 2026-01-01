@@ -12,27 +12,32 @@ use v5.40;
 use lib 'lib';
 
 use Getopt::Long
-  qw(GetOptionsFromArray :config no_ignore_case auto_abbrev long_prefix_pattern=--?);
+qw(GetOptionsFromArray :config no_ignore_case auto_abbrev long_prefix_pattern=--?);
 
 use IPC::Nosh;
+use IPC::Nosh::IO;
 
 field $argv : param;
-
-field @cmd;
+field $debug = 0;
 field $verbose = 1;
 field @barearg;
+field @cmd;
 
 ADJUST {
     GetOptionsFromArray(
         $argv,
-        'cmd=s{1,}',
+        'cmd=s{1,}', \@cmd,
         'verbose+',
         'version',
         'help|?', 'debug+',
         '<>' => sub ($barearg) {
             push @barearg, $barearg;
         }
-    )
+    );
+
+    @cmd = map { split /\s+/ } @cmd;
+
+    dmsg($self)
 }
 
 method nosh ( $asdf = undef, %fdsa ) {
