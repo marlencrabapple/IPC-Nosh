@@ -7,6 +7,7 @@ class IPC::Nosh::IO;
 use utf8;
 use v5.40;
 
+use Const::Fast;
 use Data::Dumper::Names;
 use Devel::StackTrace::WithLexicals;
 use PadWalker;
@@ -26,8 +27,9 @@ method writeh( $line, $handle, %opt ) {
         $handle = $prev unless $opt{newh};
     }
     else {
-        $handle = $fhcache{$handle} = IO::Handle->new_from_fd( $handle, 'w' );
-        binmode $handle, ":encoding(UTF-8)";
+        $handle = $fhcache{$handle} =
+          IO::Handle->new_from_fd( $handle, $opt{mode} // 'w' );
+        binmode $handle, $opt{binmode} // ":encoding(UTF-8)";
     }
 
     if ( $line isa 'ARRAY' ) {
@@ -50,6 +52,9 @@ method info ($line) {
     $self->outh("▶ $line");
 }
 
+const our $ltrimtab_re => qr/^\t/;
+const our $lb_re       => qr/\R/;
+
 method dmsg {
     return unless $debug;
     my @caller = caller 1;
@@ -59,7 +64,7 @@ method dmsg {
     $out .= Dumper(@_);
     $out .=
       $debug && $debug == 2
-      ? join "\n", map { ( my $line = $_ ) =~ s/^\t/  /; "  $line" } split /\R/,
+      ? join "\n", map { ( my $line = $_ ) =~ s/$ltrimtab_re/  /; "  $line" } split $lb_re,
       Devel::StackTrace::WithLexicals->new(
         indent      => 1,
         skip_frames => 1
