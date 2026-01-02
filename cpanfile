@@ -2,7 +2,6 @@ requires 'perl', 'v5.40';
 
 requires 'Const::Fast';
 requires 'IPC::Run3';
-requires 'Tie::File';
 requires 'Path::Tiny';
 requires 'IO::Handle';
 requires 'HTTP::Tinyish';
