@@ -19,7 +19,7 @@ field $mode      //= 'w';
 field $autochomp //= 1;
 
 #field $printempty //= 0=;
-field $handle = IO::Handle->new_from_fd( $fd, $mode );
+field $handle { IO::Handle->new_from_fd( $fd, $mode );  }
 field @array;
 field $tied;
 
@@ -81,8 +81,8 @@ method DELETE ($index) {
 }
 
 method TIEARRAY : common ( %opt ) {
-    my $self = $class->new( %opt{qw(fh mode)} );
-    dmsg( $self, $class, \%opt );
+    my $self = $class->new(%opt{qw(fh mode)});    
+    dmsg( $self, $class, \%opt);
     $self;
 }
 
