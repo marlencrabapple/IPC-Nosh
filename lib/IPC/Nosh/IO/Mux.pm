@@ -3,25 +3,24 @@ use Object::Pad ':experimental(:all)';
 package IPC::Nosh::IO::Mux;
 class IPC::Nosh::IO::Mux;
 
-use v5.40;
 use utf8;
+use v5.40;
 
 use IO::Handle;
-use Tie::Array;
 use IPC::Nosh::IO;
 
 use vars qw'@ISA @EXPORT';
 
-#@ISA = qw'Tie::Array';
-
-field $fd        //= *STDOUT;
-field $mode      //= 'w';
-field $autochomp //= 1;
-
-#field $printempty //= 0=;
-field $handle = IO::Handle->new_from_fd( $fd, $mode );
+field $fd        : param //= *STDOUT;
+field $mode      : param //= 'w';
+field $autochomp : param //= 1;
+field $handle    : param = IO::Handle->new_from_fd( $fd, $mode );
 field @array;
 field $tied;
+
+ADJUST {
+    $handle->autoflush
+}
 
 method PUSH (@list) {
     push @array, map { $handle->print($_); chomp $_ if $autochomp; $_ } @list;
@@ -81,7 +80,11 @@ method DELETE ($index) {
 }
 
 method TIEARRAY : common ( %opt ) {
-    my $self = $class->new( %opt{qw(fh mode)} );
+    my $self = $class->new(
+        map  { $_ => $opt{$_} }
+        grep { $opt{$_} } qw(fd mode handle autochomp)
+    );
+
     dmsg( $self, $class, \%opt );
     $self;
 }

@@ -21,19 +21,18 @@ use IPC::Nosh::IO;
 @EXPORT_OK = qw($run run);
 
 field $in = \undef;
-field @out;
-field @err;
-# field %tie;
+field $out : param = [];
+field $err : param = [];
+field %tie;
+
+ADJUST {
+    $tie{out} = tie @$out, 'IPC::Nosh::IO::Mux';
+    $tie{err} = tie @$err, 'IPC::Nosh::IO::Mux', fd => *STDERR;
+}
 
 method $run ($cmd) {
-    #$tie{out} =
-    tie @out, 'IPC::Nosh::IO::Mux';
-
-    #$tie{err} =
-    tie @err, 'IPC::Nosh::IO::Mux', fd => *STDERR;
-
-    run3( $cmd, $in, \@out, \@err );
-    dmsg($self);
+    run3( $cmd, $in, $out, $err );
+    dmsg( $self, $cmd, $in, $out, $err );
 }
 
 method run ( $cmd, %opt ) {
