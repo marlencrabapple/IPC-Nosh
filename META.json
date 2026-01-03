@@ -52,7 +52,6 @@
             "Path::Tiny" : "0",
             "Regexp::Common" : "0",
             "Syntax::Keyword::Defer" : "0",
-            "Tie::File" : "0",
             "perl" : "v5.40.0"
          }
       },

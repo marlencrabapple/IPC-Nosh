@@ -12,7 +12,7 @@ use v5.40;
 use lib 'lib';
 
 use Getopt::Long
-qw(GetOptionsFromArray :config no_ignore_case auto_abbrev long_prefix_pattern=--?);
+qw(GetOptionsFromArray :config no_ignore_case auto_abbrev passthrough long_prefix_pattern=--?);
 
 use IPC::Nosh 'run';
 use IPC::Nosh::IO;
