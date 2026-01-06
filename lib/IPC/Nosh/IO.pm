@@ -22,6 +22,10 @@ use vars qw'@EXPORT @EXPORT_OK';
 field $debug = $ENV{DEBUG} // 0;
 field %fhcache : reader(handle) = ();
 
+field $ddn_uplvl    : param : accessor = 3;
+field $trace_indent : param : accessor = $ENV{DEBUG_INDENT}     // 1;
+field $skip_frames  : param : accessor = $ENV{DEBUG_SKIPFRAMES} // 1;
+
 method writeh( $line, $handle, %opt ) {
     if ( my $prev = $fhcache{$handle} ) {
         $handle = $prev unless $opt{newh};
@@ -58,7 +62,7 @@ const our $lb_re       => qr/\R/;
 method dmsg {
     return unless $debug;
     my @caller = caller 1;
-    local $Data::Dumper::Names::UpLevel = 3;
+    local $Data::Dumper::Names::UpLevel = $ddn_uplvl;
 
     my $out;
     $out .= Dumper(@_);
@@ -66,8 +70,8 @@ method dmsg {
       $debug && $debug == 2
       ? join "\n", map { ( my $line = $_ ) =~ s/$ltrimtab_re/  /; "  $line" } split $lb_re,
       Devel::StackTrace::WithLexicals->new(
-        indent      => 1,
-        skip_frames => 1
+        indent        => $trace_indent // 1,
+          skip_frames => $skip_frames  // 1
       )->as_string
       : "at $caller[1]:$caller[2]\n";
 

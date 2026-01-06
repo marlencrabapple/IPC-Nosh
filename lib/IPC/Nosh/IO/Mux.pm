@@ -88,27 +88,3 @@ method TIEARRAY : common ( %opt ) {
     dmsg( $self, $class, \%opt );
     $self;
 }
-
-# sub PUSH ($self, @list) {
-#     #$self->{writeh}->( $_, $self->{handle} ) for @list;
-
-#     # TODO: benchmark against calling SUPER->PUSH for each elem
-#     Tie::StdArray::PUSH( $self,
-#         map { $self->{handle}->print($_); chomp $_; $_ } @list );
-# }
-
-# sub STORE( $self,$index, $value ) {
-#     #$self->{writeh}->teh( $value, $self->{handle} );
-# $self->{handle}->print($value);
-
-# # dmsg( $self, $index, $value );
-# Tie::StdArray::STORE( $self, $index, map { chomp $_; $_ } $value );
-# }
-
-# sub TIEARRAY  ($class, %opt) {
-# my $self = Tie::StdArray->TIEARRAY(%opt);(%
-# $self->{fd} = $opt{fd} if $opt{fd};
-# $self->{mode} = $opt{mode} if $opt{mode};
-# dmsg($self);
-# $self->{handle} = "asdf";#IO::Handle->new_from_fd($self->{fd}, $self->{mode} // 'w');
-# }
