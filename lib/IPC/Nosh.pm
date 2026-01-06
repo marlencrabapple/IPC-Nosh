@@ -23,7 +23,7 @@ use IPC::Nosh::IO;
 field $in = \undef;
 field $out : param = [];
 field $err : param = [];
-field %tie;
+field %tie : reader;
 
 ADJUST {
     $tie{out} = tie @$out, 'IPC::Nosh::IO::Mux';

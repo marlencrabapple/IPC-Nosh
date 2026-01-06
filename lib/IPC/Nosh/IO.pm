@@ -49,7 +49,7 @@ method errh ($line) {
 }
 
 method info ($line) {
-    $self->outh("▶ $line");
+    $self->errh("▶ $line");
 }
 
 const our $ltrimtab_re => qr/^\t/;
