@@ -14,12 +14,17 @@ use vars qw'@ISA @EXPORT';
 field $fd        : param //= *STDOUT;
 field $mode      : param //= 'w';
 field $autochomp : param //= 1;
+#field $autoflush : param //= 0;
 field $handle : param : reader = IO::Handle->new_from_fd( $fd, $mode );
 field @array;
 field $tied;
 
-ADJUST {
-    $handle->autoflush
+ADJUST :params (:$autoflush) {
+    $handle->autoflush if $autoflush
+}
+
+method autoflush {
+    $handle->autoflush(shift //1 )
 }
 
 method PUSH (@list) {

@@ -17,7 +17,7 @@ use Syntax::Keyword::Defer;
 use base 'Class::Exporter';
 use vars qw'@EXPORT @EXPORT_OK';
 
-@EXPORT = qw(dmsg info success err fatal);
+@EXPORT = qw(dmsg info success err fatal msg);
 
 field $debug = $ENV{DEBUG} // 0;
 field %fhcache : reader(handle) = ();
@@ -33,6 +33,7 @@ method writeh( $line, $handle, %opt ) {
     else {
         $handle = $fhcache{$handle} =
           IO::Handle->new_from_fd( $handle, $opt{mode} // 'w' );
+        # $handle->autoflush if $opt{autoflush} // 0;
         binmode $handle, $opt{binmode} // ":encoding(UTF-8)";
     }
 
@@ -62,7 +63,10 @@ const our $lb_re       => qr/\R/;
 method dmsg {
     return unless $debug;
     my @caller = caller 1;
+
     local $Data::Dumper::Names::UpLevel = $ddn_uplvl;
+    local $Data::Dumper::Pad    = "  ";
+    local $Data::Dumper::Indent = 1;
 
     my $out;
     $out .= Dumper(@_);
@@ -90,4 +94,8 @@ method fatal ( $line, $status = $? // 255, %opt ) {
 
 method success ($line) {
     $self->outh("⭕️ $line");
+}
+
+method msg ($line) {
+    $self->outh($line);
 }
