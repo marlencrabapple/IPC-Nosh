@@ -36,7 +36,7 @@ method $run ($cmd) {
 }
 
 method run ( $cmd, %opt ) {
-    $self->$run( $cmd, %cli );
+    $self->$run($cmd)    #, %cli );
 }
 
 __END__

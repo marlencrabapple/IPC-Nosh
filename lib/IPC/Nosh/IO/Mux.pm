@@ -14,7 +14,7 @@ use vars qw'@ISA @EXPORT';
 field $fd        : param //= *STDOUT;
 field $mode      : param //= 'w';
 field $autochomp : param //= 1;
-field $handle    : param = IO::Handle->new_from_fd( $fd, $mode );
+field $handle : param : reader = IO::Handle->new_from_fd( $fd, $mode );
 field @array;
 field $tied;
 
