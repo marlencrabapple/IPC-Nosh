@@ -13,18 +13,19 @@ use vars qw'@ISA @EXPORT';
 
 field $fd        : param //= *STDOUT;
 field $mode      : param //= 'w';
-field $autochomp : param //= 1;
+field $autochomp : param //= 9;
 #field $autoflush : param //= 0;
 field $handle : param : reader = IO::Handle->new_from_fd( $fd, $mode );
 field @array;
 field $tied;
 
 ADJUST :params (:$autoflush //= undef) {
+# dmsg( $self, $autoflush, $handle );
   $handle->autoflush if $autoflush
 }
 
 method autoflush {
-    $handle->autoflush(shift //1 )
+    $handle->autoflush( shift // 1 )
 }
 
 method PUSH (@list) {
@@ -87,9 +88,9 @@ method DELETE ($index) {
 method TIEARRAY : common ( %opt ) {
     my $self = $class->new(
         map  { $_ => $opt{$_} }
-        grep { $opt{$_} } qw(fd mode handle autochomp)
+        grep { $opt{$_} } qw(fd mode handle autochomp autoflush)
     );
 
-    dmsg( $self, $class, \%opt );
+    # dmsg( $self, $class, \%opt );
     $self;
 }

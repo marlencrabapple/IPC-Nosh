@@ -18,7 +18,10 @@ use IPC::Nosh 'run';
 use IPC::Nosh::IO;
 
 field $argv : param;
-field $debug = 0;
+field $debug;
+field $stdin;
+field $autoflush : param = undef;
+field $autochomp : param = undef;
 field $verbose = 1;
 field @barearg;
 field @cmd;
@@ -30,8 +33,11 @@ ADJUST {
         'verbose+',
         'version',
         'help|?', 'debug+',
+        'stdin', 'autoflush', 'autochomp',
         '<>' => sub ($barearg) {
-            push @barearg, $barearg;
+            push @cmd, $barearg;
+            fatal("--cmd and positional arguments cannot both have values")
+              unless scalar @cmd > 0
         }
     );
 
@@ -41,8 +47,10 @@ ADJUST {
 }
 
 method nosh ( $asdf = undef, %fdsa ) {
-    run( \@cmd );
-}
+    # my %arg = ()
+    # $arg{in} = $stdin
+    run( \@cmd, autoflush => $autoflush, autochomp => $autochomp, $stdin ? ( in => undef ) : ())
+} 
 
 method cli : common ($argv = \@ARGV, %opt) {
     my $self = $class->new( argv => $argv, %opt );

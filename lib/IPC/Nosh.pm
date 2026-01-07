@@ -14,15 +14,16 @@ use v5.40;
 
 use IPC::Run3;
 use IO::Handle;
+use Syntax::Keyword::Dynamically;
 
 use IPC::Nosh::IO::Mux;
 use IPC::Nosh::IO;
 
 @EXPORT_OK = qw($run run);
 
-field $in = \undef;
-field $out : param = [];
-field $err : param = [];
+field $in  : param : mutator = \undef;
+field $out : param : mutator = [];
+field $err : param : mutator = [];
 field %tie : reader;
 
 ADJUST {
@@ -30,13 +31,19 @@ ADJUST {
     $tie{err} = tie @$err, 'IPC::Nosh::IO::Mux', fd => *STDERR;
 }
 
-method $run ($cmd) {
+method $run ($cmd, %opt) {
     run3( $cmd, $in, $out, $err );
     dmsg( $self, $cmd, $in, $out, $err );
 }
 
 method run ( $cmd, %opt ) {
-    $self->$run($cmd)    #, %cli );
+
+    foreach my ( $k, $v ) ( %opt{qw(in out err)} ) {
+        dynamically $self->$k = $v if $v;
+    }
+
+    $self->in = $opt{in};
+    $self->$run( $cmd, %opt{qw(in out err)} )    #, %cli );
 }
 
 __END__
