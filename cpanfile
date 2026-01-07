@@ -4,7 +4,6 @@ requires 'Const::Fast';
 requires 'IPC::Run3';
 requires 'Path::Tiny';
 requires 'IO::Handle';
-requires 'HTTP::Tinyish';
 requires 'Data::Dumper::Names';
 requires 'Devel::StackTrace::WithLexicals';
 requires 'Class::Exporter';
