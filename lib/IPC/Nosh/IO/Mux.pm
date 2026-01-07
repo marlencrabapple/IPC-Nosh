@@ -19,8 +19,8 @@ field $handle : param : reader = IO::Handle->new_from_fd( $fd, $mode );
 field @array;
 field $tied;
 
-ADJUST :params (:$autoflush) {
-    $handle->autoflush if $autoflush
+ADJUST :params (:$autoflush //= undef) {
+  $handle->autoflush if $autoflush
 }
 
 method autoflush {
