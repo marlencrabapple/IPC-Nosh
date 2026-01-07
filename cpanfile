@@ -9,6 +9,7 @@ requires 'Devel::StackTrace::WithLexicals';
 requires 'Class::Exporter';
 requires 'Syntax::Keyword::Defer';
 requires 'Object::Pad';
+requires 'Syntax::Keyword::Dynamically';
 requires 'Regexp::Common';
 
 on test => sub {
