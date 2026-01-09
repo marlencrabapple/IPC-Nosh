@@ -45,13 +45,13 @@
             "Const::Fast" : "0",
             "Data::Dumper::Names" : "0",
             "Devel::StackTrace::WithLexicals" : "0",
-            "HTTP::Tinyish" : "0",
             "IO::Handle" : "0",
             "IPC::Run3" : "0",
             "Object::Pad" : "0",
             "Path::Tiny" : "0",
             "Regexp::Common" : "0",
             "Syntax::Keyword::Defer" : "0",
+            "Syntax::Keyword::Dynamically" : "0",
             "perl" : "v5.40.0"
          }
       },

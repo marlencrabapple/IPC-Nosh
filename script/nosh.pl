@@ -19,21 +19,22 @@ use IPC::Nosh::IO;
 
 field $argv : param;
 field $debug;
-field $stdin;
-field $autoflush : param = undef;
-field $autochomp : param = undef;
+# field $stdin;
+field $autoflush : mutator;
+field $autochomp : mutator;
 field $verbose = 1;
 field @barearg;
 field @cmd;
 
-ADJUST {
+ADJUST { # :params (:$autochomp, :$autoflush) {
+    my %clidest;
+
     GetOptionsFromArray(
-        $argv,
-        'cmd=s{1,}', \@cmd,
+        $argv, \%clidest, 'cmd=s{1,}',
         'verbose+',
         'version',
-        'help|?', 'debug+',
-        'stdin', 'autoflush', 'autochomp',
+        'help|?',      'debug+',      #'stdin'
+          'autoflush', 'autochomp',
         '<>' => sub ($barearg) {
             push @cmd, $barearg;
             fatal("--cmd and positional arguments cannot both have values")
@@ -41,19 +42,30 @@ ADJUST {
         }
     );
 
+    foreach my ( $k, $v ) (%clidest) {
+        $self->$k = $v if $v;
+    }
+
     @cmd = map { split /\s+/ } @cmd;
 
-    dmsg($self)
+    # dmsg( $autoflush, $autochomp )
 }
 
 method nosh ( $asdf = undef, %fdsa ) {
-    # my %arg = ()
-    # $arg{in} = $stdin
-    run( \@cmd, autoflush => $autoflush, autochomp => $autochomp, $stdin ? ( in => undef ) : ())
-} 
+    # dmsg($self);
+    run(
+        \@cmd,
 
-method cli : common ($argv = \@ARGV, %opt) {
-    my $self = $class->new( argv => $argv, %opt );
+        autoflush => $autoflush,
+        autochomp => $autochomp,
+
+        # stdin     => $stdin
+      )
+}
+
+method cli : common ($argv = \@ARGV) {
+    my $self = $class->new( argv => $argv );
+    # dmsg($self, $self->autoflush, $self->autochomp);
     $self->nosh;
 }
 

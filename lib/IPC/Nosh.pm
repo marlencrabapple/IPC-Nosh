@@ -19,31 +19,73 @@ use Syntax::Keyword::Dynamically;
 use IPC::Nosh::IO::Mux;
 use IPC::Nosh::IO;
 
-@EXPORT_OK = qw($run run);
+@EXPORT_OK = qw($run);
+@EXPORT    = 'run';
 
-field $in  : param : mutator = \undef;
-field $out : param : mutator = [];
-field $err : param : mutator = [];
+field $debug //= $ENV{DEBUG};
+
+field $in  : param = \undef;
+field $out : param = [];
+field $err : param = [];
+
 field %tie : reader;
 
-ADJUST {
-    $tie{out} = tie @$out, 'IPC::Nosh::IO::Mux';
-    $tie{err} = tie @$err, 'IPC::Nosh::IO::Mux', fd => *STDERR;
+ADJUST :params (:$autoflush //= undef, :$autochomp //= undef, :$stdin_passthrough //= undef) {
+    $in = undef if $stdin_passthrough;
+    
+    my %tiearg = (
+        autoflush => $autoflush ? 1 : 0
+        , autochomp => $autochomp ? 1 : 0);
+
+    dmsg($autoflush, $autochomp, $stdin_passthrough, \%tiearg );
+
+    $self->set_handle($out, 'out', %tiearg);
+    $self->set_handle($err, 'err', fd => *STDERR, %tiearg);
 }
 
 method $run ($cmd, %opt) {
     run3( $cmd, $in, $out, $err );
-    dmsg( $self, $cmd, $in, $out, $err );
+    dmsg( $self, \%opt );
+    $self
 }
 
 method run ( $cmd, %opt ) {
-
-    foreach my ( $k, $v ) ( %opt{qw(in out err)} ) {
-        dynamically $self->$k = $v if $v;
+    if($debug && $opt{dynamically} ){
+...
     }
+    elsif($debug && $opt{accessor}) {
+        # foreach my ($k, $v) (%opt{qw(out err)} {
+        #     $self->set_handle()
+        # }) 
+        $self->outh(delete $opt{out}, %opt);
+        $self->errh(delete $opt{err}, %opt);
+    }
+    else {
+        dynamically $self = scalar keys %opt ? __PACKAGE__->new(%opt) : $self;
+        $self->$run( $cmd, %opt )    #, %cli );
+    }
+}
 
-    $self->in = $opt{in};
-    $self->$run( $cmd, %opt{qw(in out err)} )    #, %cli );
+method tie_handle($aref, %opt) {
+        my %tiearg = (%opt{qw(in out err autoflush autochomp binmode fd)});
+        dmsg(\%tiearg);
+        tie @$aref, 'IPC::Nosh::IO::Mux', %tiearg;
+}
+
+method set_handle ($aref, $hkey, %opt) {
+        return $self->$hkey unless $aref || $aref == $out;
+        # my $meth = "${tiekey}h";
+        # $self->$meth($aref, %opt)
+        $tie{$hkey} = $self->tie_handle( $aref, %opt );
+}
+
+method outh ( $aref //= $out, %opt ) {
+
+    $self->set_handle($aref, 'out', %opt)
+}
+
+method errh ( $aref //= $err, %opt ) {
+    $self->set_handle( $aref, 'err', %opt )
 }
 
 __END__

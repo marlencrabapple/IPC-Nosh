@@ -13,15 +13,15 @@ use vars qw'@ISA @EXPORT';
 
 field $fd        : param //= *STDOUT;
 field $mode      : param //= 'w';
-field $autochomp : param //= 9;
+field $autochomp : param //= undef;
 #field $autoflush : param //= 0;
 field $handle : param : reader = IO::Handle->new_from_fd( $fd, $mode );
 field @array;
 field $tied;
 
 ADJUST :params (:$autoflush //= undef) {
-# dmsg( $self, $autoflush, $handle );
-  $handle->autoflush if $autoflush
+    # dmsg( $self, $autoflush, $handle );
+    $handle->autoflush if $autoflush
 }
 
 method autoflush {
