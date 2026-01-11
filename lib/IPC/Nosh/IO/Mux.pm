@@ -14,15 +14,25 @@ use vars qw'@ISA @EXPORT';
 field $fd        : param //= *STDOUT;
 field $mode      : param //= 'w';
 field $autochomp : param //= undef;
-#field $autoflush : param //= 0;
 field $handle : param : reader = IO::Handle->new_from_fd( $fd, $mode );
 field @array;
 field $tied;
+
+field $callback : param(on) = {};
 
 ADJUST :params (:$autoflush //= undef) {
     # dmsg( $self, $autoflush, $handle );
     $handle->autoflush if $autoflush
 }
+
+# method line ($line) {
+#     $_->( $self, $line ) for $$callback{line}->@*;
+# }
+
+# method error ($line) {
+#     $_->( $self, $line ) for $$callback{error}->@*;
+# }
+
 
 method autoflush {
     $handle->autoflush( shift // 1 )
@@ -35,6 +45,7 @@ method PUSH (@list) {
 
 method STORE( $index, $value ) {
     $handle->print($value);
+    # $_->( $self, $value ) for $$callback{line}->@*;
     chomp $value if $autochomp;
     $array[$index] = $value;
 }
@@ -88,7 +99,7 @@ method DELETE ($index) {
 method TIEARRAY : common ( %opt ) {
     my $self = $class->new(
         map  { $_ => $opt{$_} }
-        grep { $opt{$_} } qw(fd mode handle autochomp autoflush)
+        grep { $opt{$_} } qw(fd sub scalarref mode handle autochomp autoflush)
     );
 
     # dmsg( $self, $class, \%opt );
