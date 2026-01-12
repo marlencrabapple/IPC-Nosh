@@ -24,10 +24,10 @@ field $autoflush : mutator;
 field $autochomp : mutator;
 field $verbose = 1;
 field @barearg;
-field @cmd;
+field $cmd : mutator;
 
-ADJUST { # :params (:$autochomp, :$autoflush) {
-    my %clidest;
+ADJUST { #{ # :params (:$autochomp, :$autoflush) {
+    my %clidest = (cmd => []);
 
     GetOptionsFromArray(
         $argv, \%clidest, 'cmd=s{1,}',
@@ -36,9 +36,9 @@ ADJUST { # :params (:$autochomp, :$autoflush) {
         'help|?',      'debug+',      #'stdin'
           'autoflush', 'autochomp',
         '<>' => sub ($barearg) {
-            push @cmd, $barearg;
+            push @$cmd, $barearg;
             fatal("--cmd and positional arguments cannot both have values")
-              unless scalar @cmd > 0
+            unless scalar @$cmd > 0
         }
     );
 
@@ -46,7 +46,7 @@ ADJUST { # :params (:$autochomp, :$autoflush) {
         $self->$k = $v if $v;
     }
 
-    @cmd = map { split /\s+/ } @cmd;
+    @$cmd = map { split /\s+/ } @$cmd;
 
     # dmsg( $autoflush, $autochomp )
 }
@@ -54,7 +54,7 @@ ADJUST { # :params (:$autochomp, :$autoflush) {
 method nosh ( $asdf = undef, %fdsa ) {
     # dmsg($self);
     run(
-        \@cmd,
+        \@$cmd,
 
         autoflush => $autoflush,
         autochomp => $autochomp,

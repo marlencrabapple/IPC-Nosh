@@ -45,7 +45,7 @@ method PUSH (@list) {
 
 method STORE( $index, $value ) {
     $handle->print($value);
-    # $_->( $self, $value ) for $$callback{line}->@*;
+    $_->( $self, $value ) for $$callback{line}->@*;
     chomp $value if $autochomp;
     $array[$index] = $value;
 }
