@@ -33,8 +33,8 @@ method writeh( $line, $handle, %opt ) {
     else {
         $handle = $fhcache{$handle} =
           IO::Handle->new_from_fd( $handle, $opt{mode} // 'w' );
-        # $handle->autoflush if $opt{autoflush} // 0;
-        binmode $handle, $opt{binmode} // ":encoding(UTF-8)";
+
+	binmode $handle, $opt{binmode} // ":encoding(UTF-8)";
     }
 
     if ( $line isa 'ARRAY' ) {

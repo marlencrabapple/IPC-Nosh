@@ -36,9 +36,9 @@ ADJUST { #{ # :params (:$autochomp, :$autoflush) {
         'help|?',      'debug+',      #'stdin'
           'autoflush', 'autochomp',
         '<>' => sub ($barearg) {
-            push @$cmd, $barearg;
+            push $clidest{cmd}->@*, ( split /\s/, $barearg );
             fatal("--cmd and positional arguments cannot both have values")
-            unless scalar @$cmd > 0
+                unless scalar $clidest{cmd}->@* > 0
         }
     );
 
@@ -54,7 +54,7 @@ ADJUST { #{ # :params (:$autochomp, :$autoflush) {
 method nosh ( $asdf = undef, %fdsa ) {
     # dmsg($self);
     run(
-        \@$cmd,
+        $cmd,
 
         autoflush => $autoflush,
         autochomp => $autochomp,

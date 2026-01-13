@@ -23,30 +23,39 @@ use IPC::Nosh::IO;
 
 @EXPORT_OK = qw($run);
 @EXPORT    = 'run';
-    const my @cbparamkey =>
-      qw'line error exiterr nonzero exit eof ipcfail success';
+
+const my @cbparamkey => qw'line error exiterr nonzero exit eof ipcfail success';
 
 field $debug //= $ENV{DEBUG};
 
-field $in  = \undef;
-field $out = [];
-field $err = [];
+field $in  : param = \undef;
+field $out : param = [];
+field $err : param = [];
 
-field $callback;    #: param(on);
+field $callback;
 
 field %tie : reader;
 
-ADJUST :params (:$autoflush //= undef
-              , :$autochomp //= undef
-              , :$stdin_passthrough //= undef
-              , :$on = {}) {
-    $in = undef if $stdin_passthrough;
-    
-    my %tiearg = (
-        autoflush => $autoflush ? 1 : 0
-      , autochomp => $autochomp ? 1 : 0);
+ADJUST : params (
+    : $autoflush         //= undef,
+    : $autochomp         //= undef,
+    : $stdin_passthrough //= undef,
+    : $on = {}
+  )
+{
+    $in = undef
+      if $stdin_passthrough;
 
-    dmsg($autoflush, $autochomp, $stdin_passthrough, \%tiearg );
+    @$callback{@::cbparamkey} =
+      map { $$on{$_} isa ARRAY ? $$on{$_}->@* : [ $$on{$_} // () ] }
+      @$on{@::cbparamkey};
+
+    my %tiearg = (
+        autoflush => $autoflush ? 1 : 0,
+        autochomp => $autochomp ? 1 : 0
+    );
+
+    $tiearg{on} = %$callback{@::cbparamkey};
 
     # $line: called with $line when child writes to STDOUT. this is the same as
     # passing a subroutine as $out
@@ -57,35 +66,35 @@ ADJUST :params (:$autoflush //= undef
     # $ipcfail: called after unrecoverable/unknown IPC errors
     # $success: called when child exits with 0
 
-    @$callback{@::cbparamkey} =
-      map { $$on{$_} isa ARRAY ? $$on{$_}->@* : [ $$on{$_} // () ] }
-      @$on{ @::cbparamkey};
+    $self->set_handle( $out, 'out', %tiearg );
+    $self->set_handle(
+        $err, 'err',
+        fd => *STDERR,
+        %tiearg
+    );
 
-    $self->set_handle($out, 'out', (on => { %$callback{@::cbparamkey} }, %tiearg));
-    $self->set_handle($err, 'err', (on => { %$callback{@::cbparamkey} }, fd => *STDERR, %tiearg));
+# foreach my ($destname, $destref) ( mesh [qw(inh outh errh)], [$in, $out, $err]) {
+#     if ( ref $destref eq 'ARRAY' ) {
+#         # Used as backing storage or kept in sync
+#         # with replcaement more  suitable for job load
+#             # $self->set_handle( $out, 'out',
+#             # ( on => { %$callback{@::cbparamkey} }, %tiearg ) );
+#         #push $self->$destname->@*, $destref
+#         $self->$destname->@* = $destref
+#     }
+#     elsif ( ref $destref eq 'CODE' ) {
+#         #push $callback->{}->@*, $destref
+#         ...
+#     }
+#     elsif ( ref $destref eq 'GLOB' ) {
+#         # File handle is appended to by line with respects to existing
+#         # binmode
+#         ...
+#     }
+# }
 }
 
-ADJUST : params (:$in = \undef, :$out = [], :$err = []) {
-    foreach my ($destname, $destref) ( mesh [qw(inh outh errh)], [$in, $out, $err]) {
-        if ( ref $destref eq 'ARRAY' ) { 
-            # Used as backing storage or kept in sync
-            # with replcaement more  suitable for job load
-            
-            #push $self->$destname->@*, $destref
-            $self->$destname->@* = $destref
-        }
-        elsif ( ref $destref eq 'CODE' ) {  
-        #push $callback->{}->@*, $destref
-        ...
-        }
-        elsif ( ref $destref eq 'GLOB' ) { 
-            # File handle is appended to by line with respects to existing binmode
-             ...
-        }
-    }
-}
-
-method $run ($cmd, %opt) {
+method $run ( $cmd, %opt ) {
     my $ipcfail = run3( $cmd, $in, $out, $err );
     my ( $status, $oserr ) = ( $?, $! );
 
@@ -105,20 +114,21 @@ method $run ($cmd, %opt) {
         ) for $$callback{ipcfail}->@*;
     }
 
-    dmsg( $self, \%opt );
-    $self
+    # dmsg( $self, \%opt );
+    $self;
 }
 
-method run ( $cmd, %opt ) {
-    if($debug && $opt{dynamically} ){
-...
+method run( $cmd, %opt ) {
+    if ( $debug && $opt{dynamically} ) {
+        ...;
     }
-    elsif($debug && $opt{accessor}) {
+    elsif ( $debug && $opt{accessor} ) {
+
         # foreach my ($k, $v) (%opt{qw(out err)} {
         #     $self->set_handle()
-        # }) 
-        $self->outh(delete $opt{out}, %opt);
-        $self->errh(delete $opt{err}, %opt);
+        # })
+        $self->outh( delete $opt{out}, %opt );
+        $self->errh( delete $opt{err}, %opt );
     }
     else {
         dynamically $self = scalar keys %opt ? __PACKAGE__->new(%opt) : $self;
@@ -126,26 +136,27 @@ method run ( $cmd, %opt ) {
     }
 }
 
-method tie_handle($aref, %opt) {
-        my %tiearg = (%opt{qw(in out err autoflush autochomp binmode fd)});
-        dmsg(\%tiearg);
-        tie @$aref, 'IPC::Nosh::IO::Mux', %tiearg;
+method tie_handle( $aref, %opt ) {
+    my %tiearg = %opt;
+    dmsg( $aref, \%opt, \%tiearg );
+    tie @$aref, 'IPC::Nosh::IO::Mux', %tiearg;
 }
 
-method set_handle ($aref, $hid, %opt) {
-        return $self->$hid unless $aref || $aref == $out;
-        # my $meth = "${tiekey}h";
-        # $self->$meth($aref, %opt)
-        $tie{$hid} = $self->tie_handle( $aref, on => $callback, %opt );
+method set_handle ( $aref, $hid, %opt ) {
+    return $self->$hid unless $aref || $aref == $out;
+
+    # my $meth = "${tiekey}h";
+    # $self->$meth($aref, %opt)
+    $tie{$hid} = $self->tie_handle( $aref, %opt );
 }
 
 method outh ( $aref //= $out, %opt ) {
 
-    $self->set_handle($aref, 'out', %opt)
+    $self->set_handle( $aref, 'out', %opt );
 }
 
 method errh ( $aref //= $err, %opt ) {
-    $self->set_handle( $aref, 'err', %opt )
+    $self->set_handle( $aref, 'err', %opt );
 }
 
 __END__
