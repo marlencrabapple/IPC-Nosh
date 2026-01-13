@@ -58,7 +58,6 @@
       "test" : {
          "requires" : {
             "Test::CPAN::Meta" : "0",
-            "Test::MinimumVersion::Fast" : "0",
             "Test::More" : "0.96",
             "Test::Pod" : "0"
          }

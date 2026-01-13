@@ -16,7 +16,6 @@ on test => sub {
     requires 'Test::More', '0.96';
     requires 'Test::CPAN::Meta';
     requires 'Test::Pod';
-    requires 'Test::MinimumVersion::Fast';
 };
 
 on develop => sub {
