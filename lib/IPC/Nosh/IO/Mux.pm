@@ -7,37 +7,51 @@ use utf8;
 use v5.40;
 
 use IO::Handle;
+use Const::Fast;
 use IPC::Nosh::IO;
 
 use vars qw'@ISA @EXPORT';
 
+const our %mux_default => (
+    fd        => *STDOUT,
+    mode      => 'w',
+    autochomp => undef,
+    autoflush => undef
+);
+
 field $fd        : param //= *STDOUT;
 field $mode      : param //= 'w';
 field $autochomp : param //= undef;
+field $autoflush : param //= undef;
+field $mux_default : reader = \%mux_default;
+
 field $handle : param : reader = IO::Handle->new_from_fd( $fd, $mode );
 field @array;
 field $tied;
 
 field $callback : param(on) = {};
 
-ADJUST :params (:$autoflush //= undef) {
+ADJUST {
     $handle->autoflush if $autoflush;
 }
 
-method autoflush {
-    $handle->autoflush( shift // 1 )
-}
-
 method PUSH (@list) {
-    push @array, map { $handle->print($_); chomp $_ if $autochomp; $_ } @list;
+    push @array, map {
+        $handle->print($_);
+        chomp $_ if $autochomp;
+        $_
+    } @list;
+
     $self->FETCHSIZE;
 }
 
 method STORE( $index, $value ) {
     $handle->print($value);
-    # $_->( $self, $value ) for $$callback{line}->@*;
+
     chomp $value if $autochomp;
     $array[$index] = $value;
+
+    $_->( $self, $value ) for $$callback{line}->@*;
 }
 
 method STORESIZE ($count) {

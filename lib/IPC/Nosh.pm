@@ -21,18 +21,27 @@ use Syntax::Keyword::Dynamically;
 use IPC::Nosh::IO::Mux;
 use IPC::Nosh::IO;
 
-@EXPORT_OK = qw($run);
-@EXPORT    = 'run';
+# @EXPORT_OK = qw($run);
+@EXPORT = 'run';
 
-const my @cbparamkey => qw'line error exiterr nonzero exit eof ipcfail success';
+const our @cbparamkey =>
+  qw'line error exiterr nonzero exit eof ipcfail success';
+const our $fh_suffix_re => qr/h$/;
 
+field $constructor;
+
+field $same_instance : param(use_imported) = 0;
 field $debug //= $ENV{DEBUG};
 
 field $in  : param = \undef;
 field $out : param = [];
 field $err : param = [];
 
-field $callback;
+field $handle_aref;
+field $handle_fh;
+field $handle_coderef;
+
+field $callback = {};
 
 field %tie : reader;
 
@@ -73,28 +82,61 @@ ADJUST : params (
         %tiearg
     );
 
-# foreach my ($destname, $destref) ( mesh [qw(inh outh errh)], [$in, $out, $err]) {
-#     if ( ref $destref eq 'ARRAY' ) {
-#         # Used as backing storage or kept in sync
-#         # with replcaement more  suitable for job load
-#             # $self->set_handle( $out, 'out',
-#             # ( on => { %$callback{@::cbparamkey} }, %tiearg ) );
-#         #push $self->$destname->@*, $destref
-#         $self->$destname->@* = $destref
-#     }
-#     elsif ( ref $destref eq 'CODE' ) {
-#         #push $callback->{}->@*, $destref
-#         ...
-#     }
-#     elsif ( ref $destref eq 'GLOB' ) {
-#         # File handle is appended to by line with respects to existing
-#         # binmode
-#         ...
-#     }
-# }
+    $constructor = {
+        stdin_passthrough => $stdin_passthrough,
+        autochomp         => $autochomp,
+        autoflush         => $autoflush,
+        in                => $in,
+        out               => $out,
+        err               => $err
+    };
+
+    foreach my ( $k, $v ) ( mesh [qw(inh outh errh)], [ $in, $out, $err ] ) {
+        if ( ref $v eq 'ARRAY' ) {
+
+            # Used as backing storage or kept in sync
+            # with replcaement more  suitable for job load
+            # $self->set_handle( $out, 'out',
+            # ( on => { %$callback{@::cbparamkey} }, %tiearg ) );
+            #push $self->$destname->@*, $destref
+            # $self->$k->@* = $v;
+        }
+        elsif ( ref $v eq 'CODE' ) {
+
+            #push $callback->{}->@*, $destref
+            push $callback->{ $k =~ s/h$//r }{line}->@*, $v;
+        }
+        elsif ( ref $v eq 'GLOB' ) {
+
+            # File handle is appended to by line with respects to existing
+            # binmode
+            ...;
+        }
+    }
 }
 
 method $run ( $cmd, %opt ) {
+    foreach my ( $name, $ref ) ( %opt{qw(in out err)} ) {
+        if ( $ref isa HASH ) {
+            foreach my ( $opt, $val )
+              ( $ref->%{qw(autochomp autoflush line mode fd)} )
+            {
+                dynamically $tie{$ref}->$opt = $val;
+            }
+        }
+        elsif ( $ref isa ARRAY ) {
+            $self->set_handle(
+                $ref, $name,
+                IPC::Nosh::Mux->mux_default,
+                ( $opt{reuse_config} ? %$constructor : () )
+            );
+        }
+        elsif ( $ref isa GLOB ) {
+            ...;
+        }
+
+    }
+
     my $ipcfail = run3( $cmd, $in, $out, $err );
     my ( $status, $oserr ) = ( $?, $! );
 
@@ -114,26 +156,17 @@ method $run ( $cmd, %opt ) {
         ) for $$callback{ipcfail}->@*;
     }
 
-    # dmsg( $self, \%opt );
-    $self;
+    $self
 }
 
-method run( $cmd, %opt ) {
-    if ( $debug && $opt{dynamically} ) {
-        ...;
-    }
-    elsif ( $debug && $opt{accessor} ) {
+method run ( $cmd, %opt ) {
+    dynamically $constructor = {} unless $opt{reuse_config};
 
-        # foreach my ($k, $v) (%opt{qw(out err)} {
-        #     $self->set_handle()
-        # })
-        $self->outh( delete $opt{out}, %opt );
-        $self->errh( delete $opt{err}, %opt );
-    }
-    else {
-        dynamically $self = scalar keys %opt ? __PACKAGE__->new(%opt) : $self;
-        $self->$run( $cmd, %opt )    #, %cli );
-    }
+    dynamically $self = scalar keys %opt
+      ? __PACKAGE__->new(%$constructor, %opt)
+      : $self unless $opt{use_imported};
+      
+    $self->$run( $cmd, %opt )    #, %cli );
 }
 
 method tie_handle( $aref, %opt ) {
