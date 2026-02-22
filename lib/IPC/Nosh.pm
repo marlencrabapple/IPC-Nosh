@@ -33,9 +33,12 @@ field $constructor;
 field $same_instance : param(use_imported) = 0;
 field $debug //= $ENV{DEBUG};
 
-field $in  : param = \undef;
-field $out : param = [];
-field $err : param = [];
+field $in  : reader = \undef;
+field $out : reader = [];
+field $err : reader = [];
+
+field $status : reader;
+field $oserr  : reader;
 
 field $handle_aref;
 field $handle_fh;
@@ -46,12 +49,15 @@ field $callback = {};
 field %tie : reader;
 
 ADJUST : params (
-    : $autoflush         //= undef,
-    : $autochomp         //= undef,
-    : $stdin_passthrough //= undef,
-    : $on = {}
-  )
-{
+  : $autoflush         //= undef,
+  : $autochomp         //= undef,
+  : $stdin_passthrough //= undef,
+  : $on = {},
+  : $in = \undef,
+
+  : $out = [],
+  : $err = []
+  ) {
     $in = undef
       if $stdin_passthrough;
 
@@ -75,21 +81,12 @@ ADJUST : params (
     # $ipcfail: called after unrecoverable/unknown IPC errors
     # $success: called when child exits with 0
 
-    $self->set_handle( $out, 'out', %tiearg );
+    $self->set_handle( $self->out, 'out', %tiearg );
     $self->set_handle(
-        $err, 'err',
+        $self->err, 'err',
         fd => *STDERR,
         %tiearg
     );
-
-    $constructor = {
-        stdin_passthrough => $stdin_passthrough,
-        autochomp         => $autochomp,
-        autoflush         => $autoflush,
-        in                => $in,
-        out               => $out,
-        err               => $err
-    };
 
     foreach my ( $k, $v ) ( mesh [qw(inh outh errh)], [ $in, $out, $err ] ) {
         if ( ref $v eq 'ARRAY' ) {
@@ -113,9 +110,19 @@ ADJUST : params (
             ...;
         }
     }
-}
 
-method $run ( $cmd, %opt ) {
+    $constructor = {
+        stdin_passthrough => $stdin_passthrough,
+        autochomp         => $autochomp,
+        autoflush         => $autoflush,
+        in                => $self->in,
+        out               => $self->out,
+        err               => $self->err
+    };
+
+  }
+
+  method $run ( $cmd, %opt ){
     foreach my ( $name, $ref ) ( %opt{qw(in out err)} ) {
         if ( $ref isa HASH ) {
             foreach my ( $opt, $val )
@@ -134,11 +141,14 @@ method $run ( $cmd, %opt ) {
         elsif ( $ref isa GLOB ) {
             ...;
         }
+        elsif ( $ref isa CODE ) {
+            $ref->();
+        }
 
     }
 
     my $ipcfail = run3( $cmd, $in, $out, $err );
-    my ( $status, $oserr ) = ( $?, $! );
+    ( $status, $oserr ) = ( $?, $! );
 
     if ($ipcfail) {
         $_->( $self, ret => $ipcfail, args => [ $cmd, $in, $out, $err ] )
@@ -157,20 +167,25 @@ method $run ( $cmd, %opt ) {
     }
 
     $self
-}
+  }
 
-method run ( $cmd, %opt ) {
+  method run( $cmd, %opt ) {
     dynamically $constructor = {} unless $opt{reuse_config};
 
-    dynamically $self = scalar keys %opt
-      ? __PACKAGE__->new(%$constructor, %opt)
-      : $self unless $opt{use_imported};
-      
+    dynamically $self =
+      scalar keys %opt
+      ? __PACKAGE__->new( %$constructor, %opt )
+      : $self
+      unless $opt{use_imported};
+
+    dmsg $self;
+
     $self->$run( $cmd, %opt )    #, %cli );
 }
 
 method tie_handle( $aref, %opt ) {
     my %tiearg = %opt;
+
     dmsg( $aref, \%opt, \%tiearg );
     tie @$aref, 'IPC::Nosh::IO::Mux', %tiearg;
 }

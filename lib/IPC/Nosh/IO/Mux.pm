@@ -1,6 +1,7 @@
 use Object::Pad ':experimental(:all)';
 
 package IPC::Nosh::IO::Mux;
+
 class IPC::Nosh::IO::Mux;
 
 use utf8;
@@ -19,10 +20,10 @@ const our %mux_default => (
     autoflush => undef
 );
 
-field $fd        : param //= *STDOUT;
-field $mode      : param //= 'w';
-field $autochomp : param //= undef;
-field $autoflush : param //= undef;
+field $fd          : param //= *STDOUT;
+field $mode        : param //= 'w';
+field $autochomp   : param //= undef;
+field $autoflush   : param //= undef;
 field $mux_default : reader = \%mux_default;
 
 field $handle : param : reader = IO::Handle->new_from_fd( $fd, $mode );
@@ -39,6 +40,7 @@ method PUSH (@list) {
     push @array, map {
         $handle->print($_);
         chomp $_ if $autochomp;
+        $_->( $self, $_ ) for $$callback{line}->@*;
         $_
     } @list;
 
@@ -88,7 +90,7 @@ method POP {
 }
 
 method SHIFT {
-    shift @array
+    shift @array;
 }
 
 method UNSHIFT (@list) {
@@ -97,7 +99,7 @@ method UNSHIFT (@list) {
 }
 
 method DELETE ($index) {
-    $self->STORE($index, undef)
+    $self->STORE( $index, undef );
 }
 
 method TIEARRAY : common ( %opt ) {
