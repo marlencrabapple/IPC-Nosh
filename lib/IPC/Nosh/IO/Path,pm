@@ -1,0 +1,14 @@
+use Object::Pad ':experimental(:all)';
+
+package IPC::Nosh::IO::Path;
+
+class IPC::Nosh::IO::Path : isa(Path::Tiny);
+
+use Class::Exporter;
+
+use v5.40;
+
+method path : override ($path, @opt) {
+    Path::Tiny::path( $path, @opt );
+
+}
