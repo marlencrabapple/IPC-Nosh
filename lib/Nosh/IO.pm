@@ -12,8 +12,6 @@ use Data::Dumper::Names;
 use Devel::StackTrace::WithLexicals;
 use PadWalker;
 use IO::Handle;
-use Syntax::Keyword::Defer;
-
 use base 'Class::Exporter';
 use vars qw'@EXPORT @EXPORT_OK';
 
@@ -34,7 +32,7 @@ method writeh( $line, $handle, %opt ) {
         $handle = $fhcache{$handle} =
           IO::Handle->new_from_fd( $handle, $opt{mode} // 'w' );
 
-	binmode $handle, $opt{binmode} // ":encoding(UTF-8)";
+        binmode $handle, $opt{binmode} // ":encoding(UTF-8)";
     }
 
     if ( $line isa 'ARRAY' ) {
@@ -65,17 +63,18 @@ method dmsg {
     my @caller = caller 1;
 
     local $Data::Dumper::Names::UpLevel = $ddn_uplvl;
-    local $Data::Dumper::Pad    = "  ";
-    local $Data::Dumper::Indent = 1;
+    local $Data::Dumper::Pad            = "  ";
+    local $Data::Dumper::Indent         = 1;
 
     my $out;
     $out .= Dumper(@_);
     $out .=
       $debug && $debug == 2
-      ? join "\n", map { ( my $line = $_ ) =~ s/$ltrimtab_re/  /; "  $line" } split $lb_re,
+      ? join "\n",
+      map { ( my $line = $_ ) =~ s/$ltrimtab_re/  /; "  $line" } split $lb_re,
       Devel::StackTrace::WithLexicals->new(
-        indent        => $trace_indent // 1,
-          skip_frames => $skip_frames  // 1
+        indent      => $trace_indent // 1,
+        skip_frames => $skip_frames  // 1
       )->as_string
       : "at $caller[1]:$caller[2]\n";
 
