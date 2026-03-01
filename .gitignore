@@ -6,3 +6,7 @@ MYMETA.*
 !META.json
 /.prove
 ._*
+.carmel
+local
+fatlib
+bin
