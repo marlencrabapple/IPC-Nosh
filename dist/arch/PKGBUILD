@@ -1,7 +1,7 @@
 # Maintainer: Ian Bradley <crabapp@softsrv.net>
 _package="IPC::Nosh"
 _repo="${_package//::/-}"
-pkgname="${_repo,,*}"
+pkgname="perl-${_repo,,*}"
 pkgver=0.01.g3947a60
 _dist="${_repo-${pkgver/%.r*/}}"
 pkgrel=1

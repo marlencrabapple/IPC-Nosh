@@ -1,4 +1,4 @@
-pkgbase = ipc-nosh
+pkgbase = perl-ipc-nosh
 	pkgdesc = IPC::Nosh...
 	pkgver = 0.01.g3947a60
 	pkgrel = 1
@@ -19,4 +19,4 @@ pkgbase = ipc-nosh
 	sha512sums = fc66d87c7d4942c3689dab1b52713cec37671323171f8de379f3425bc732de1c6c2d90de8fdce22758baa35ed548a327480da5eb4ecdb1f82578fb750efd3bbe
 	b2sums = 33f1998df7ff999c823aa2735f07b451a134e249711e2974398374e560ea0b04ce4d3e8e26309a4b13dfc10f8bb14c496845e7aac0ab179d5a93e9d1ecce05bf
 
-pkgname = ipc-nosh
+pkgname = perl-ipc-nosh
