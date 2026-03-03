@@ -178,15 +178,12 @@ ADJUST : params (
       : $self
       unless $opt{use_imported};
 
-    dmsg $self;
-
     $self->$run( $cmd, %opt )    #, %cli );
 }
 
 method tie_handle( $aref, %opt ) {
     my %tiearg = %opt;
 
-    dmsg( $aref, \%opt, \%tiearg );
     tie @$aref, 'IPC::Nosh::IO::Mux', %tiearg;
 }
 
