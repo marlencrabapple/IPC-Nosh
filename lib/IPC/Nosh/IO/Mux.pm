@@ -37,7 +37,7 @@ ADJUST {
 }
 
 method $on_line ( $line, $line_no = undef ) {
-    $_->( $self, $line, $line_no ) for $$callback{line}->@*;
+    $self->$_( $line, $line_no ) for $$callback{line}->@*;
 }
 
 method PUSH (@list) {
