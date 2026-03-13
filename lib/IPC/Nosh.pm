@@ -15,18 +15,16 @@ use v5.40;
 use IPC::Run3;
 use IO::Handle;
 use Const::Fast;
-use List::Util 'mesh';
+use List::Util qw'mesh none';
 use Syntax::Keyword::Dynamically;
 
 use IPC::Nosh::IO::Mux;
 use IPC::Nosh::IO;
 
-# @EXPORT_OK = qw($run);
 @EXPORT = 'run';
 
-const our @cbparamkey =>
-  qw'line error exiterr nonzero exit eof ipcfail success';
-const our $fh_suffix_re => qr/h$/;
+const our @EVENTLIST => qw'line error exiterr nonzero exit eof ipcfail success';
+const our $FH_SUFFIX_RE => qr/h$/;
 
 field $constructor;
 
@@ -44,9 +42,9 @@ field $handle_aref;
 field $handle_fh;
 field $handle_coderef;
 
-field $callback = {};
+field $callback : accessor(on) = {};
 
-field %tie : reader;
+field $tie : reader;
 
 ADJUST : params (
   : $autoflush         //= undef,
@@ -58,60 +56,12 @@ ADJUST : params (
   : $out = [],
   : $err = []
   ) {
-    $in = undef
-      if $stdin_passthrough;
-
-    @$callback{@IPC::Nosh::cbparamkey} =
-      map { $$on{$_} isa ARRAY ? $$on{$_}->@* : [ $$on{$_} // () ] }
-      @$on{@IPC::Nosh::cbparamkey};
-
     my %tiearg = (
         autoflush => $autoflush ? 1 : 0,
         autochomp => $autochomp ? 1 : 0
     );
 
-    $tiearg{on} = %$callback{@IPC::Nosh::cbparamkey};
-
-    # $line: called with $line when child writes to STDOUT. this is the same as
-    # passing a subroutine as $out
-    # $error: called when child writes to STDERR
-    # $exiterr, $nonzero: called when chlld exits with a nonzero status
-    # $exit: called when the child process exits
-    # $eof: called when a handle recieves EOF
-    # $ipcfail: called after unrecoverable/unknown IPC errors
-    # $success: called when child exits with 0
-
-    dmsg \%tiearg;
-
-    $self->set_handle( $self->out, 'out', %tiearg );
-    $self->set_handle(
-        $self->err, 'err',
-        fd => *STDERR,
-        %tiearg
-    );
-
-    foreach my ( $k, $v ) ( mesh [qw(inh outh errh)], [ $in, $out, $err ] ) {
-        if ( ref $v eq 'ARRAY' ) {
-
-            # Used as backing storage or kept in synccbp
-            # with replcaement more  suitable for job load
-            # $self->set_handle( $out, 'out',
-            # ( on => { %$callback{@::cbparamkey} }, %tiearg ) );
-            #push $self->$destname->@*, $destref
-            # $self->$k->@* = $v;
-        }
-        elsif ( ref $v eq 'CODE' ) {
-
-            #push $callback->{}->@*, $destref
-            push $callback->{ $k =~ s/h$//r }{line}->@*, $v;
-        }
-        elsif ( ref $v eq 'GLOB' ) {
-
-            # File handle is appended to by line with respects to existing
-            # binmode
-            ...;
-        }
-    }
+    $self->adjhelper( $on, \%tiearg, stdin_passthrough => $stdin_passthrough );
 
     $constructor = {
         stdin_passthrough => $stdin_passthrough,
@@ -122,21 +72,97 @@ ADJUST : params (
         err               => $self->err
     };
 
-  }
+  };
 
-  method $run ( $cmd, %opt ){
+method $inithandles ( $hhref, $tieopt, %opt ) {
+    $in = undef
+      if $opt{stdin_pt};
+
+    $self->set_handle( $out, 'out', %$tieopt );
+
+    $self->set_handle(
+        $err, 'err',
+        fd => *STDERR,
+        %$tieopt
+    );
+
+    foreach my ( $k, $v )
+      ( mesh [qw(inh outh errh)], [ $hhref->@{qw(in out err)} ] )
+    {
+        if ( ref $v eq 'ARRAY' ) {
+
+            # Used as backing storage or kept in synccbp
+            # with replcaement more  suitable for job load
+            # $self->set_handle( $out, 'out',
+            # ( on => { %$callback{@::cbparamkey} }, %tiearg ) );
+            #push $self->$destname->@*, $destref
+            # $self->$k->@* = $v;
+            ...;
+        }
+        elsif ( ref $v eq 'CODE' ) {
+
+            #push $callback->{}->@*, $destref
+
+            push $callback->{ $k =~ s/$FH_SUFFIX_RE//r }{line}->@*, $v;
+        }
+        elsif ( ref $v eq 'GLOB' ) {
+
+            # File handle is appended to by line with respects to existing
+            # binmode
+            ...;
+        }
+    }
+
+    $tie;
+}
+
+method $initcb ( $cbhref, %opt ) {
+
+    # $line: called with $line when child writes to STDOUT. this is the same as
+    # passing a subroutine as $out
+    # $error: called when child writes to STDERR
+    # $exiterr, $nonzero: called when chlld exits with a nonzero status
+    # $exit: called when the child process exits
+    # $eof: called when a handle recieves EOF
+    # $ipcfail: called after unrecoverable/unknown IPC errors
+    # $success: called when child exits with 0
+
+    foreach my ( $e, $val ) (%$cbhref) {
+        if ( none { $e eq $_ } @EVENTLIST ) {
+            err "'$e' is not a valid key for '\$on'";
+            next;
+        }
+
+        if ( $val isa ARRAY ) {
+            $$callback{$e} = $val;
+        }
+        elsif ( $val isa CODE ) {
+            $$callback{$e} = [$val];
+        }
+    }
+
+    $callback;
+}
+
+method adjhelper( $on, $tieopt, %opt ) {
+    $callback = $self->$initcb( $on, %opt );
+    $$tieopt{on} = $callback;
+    $self->$inithandles( $tie, $tieopt, %opt );
+}
+
+method $run ( $cmd, %opt ) {
     foreach my ( $name, $ref ) ( %opt{qw(in out err)} ) {
         if ( $ref isa HASH ) {
             foreach my ( $opt, $val )
               ( $ref->%{qw(autochomp autoflush line mode fd)} )
             {
-                dynamically $tie{$ref}->$opt = $val;
+                dynamically $tie->{$ref}{$opt} = $val;
             }
         }
         elsif ( $ref isa ARRAY ) {
             $self->set_handle(
                 $ref, $name,
-                IPC::Nosh::Mux->mux_default,
+                IPC::Nosh::Mux->mux_defaultopt,
                 ( $opt{reuse_config} ? %$constructor : () )
             );
         }
@@ -144,11 +170,14 @@ ADJUST : params (
             ...;
         }
         elsif ( $ref isa CODE ) {
-            $ref->();
+
+            # $ref->();
+            ...;
         }
 
     }
 
+    # Exec the command with tied handles and collect exit status
     my $ipcfail = run3( $cmd, $in, $out, $err );
     ( $status, $oserr ) = ( $?, $! );
 
@@ -157,10 +186,11 @@ ADJUST : params (
           for $$callback{ipcfail}->@*;
     }
 
+    # Success
     if ( $status == 0 ) {
         $_->($status) for $$callback{success}->@*;
     }
-    else {
+    else {    # Failure (TODO: look into why some exit codes are over 255)
         $_->(
             $self,
             exit => { status => $status, os_errno => $oserr },
@@ -168,10 +198,10 @@ ADJUST : params (
         ) for $$callback{ipcfail}->@*;
     }
 
-    $self
-  }
+    $self;
+}
 
-  method run( $cmd, %opt ) {
+method run( $cmd, %opt ) {
     dynamically $constructor = {} unless $opt{reuse_config};
 
     dynamically $self =
@@ -194,7 +224,7 @@ method set_handle ( $aref, $hid, %opt ) {
 
     # my $meth = "${tiekey}h";
     # $self->$meth($aref, %opt)
-    $tie{$hid} = $self->tie_handle( $aref, %opt );
+    $$tie{$hid} = $self->tie_handle( $aref, %opt );
 }
 
 method outh ( $aref //= $out, %opt ) {

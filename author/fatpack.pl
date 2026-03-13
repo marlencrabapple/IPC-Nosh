@@ -15,8 +15,8 @@ use IPC::Nosh::IO;
 
 our $modroot  = path(abs_path);
 our @input    = ( path("$modroot/script") );
-our $outdir   = path("./bin");
-our $outfn    = "%s";
+our $outdir   = path('./bin');
+our $outfn    = '%s';
 our $locallib = path("$modroot/local");
 our $verbose  = 1;
 our $debug    = $verbose;
@@ -60,7 +60,7 @@ GetOptions(
     \%clidest,
     'input|file|infile|infname|script=s{,}',
     'outdir|fatpack-out=s',
-'outfn|out-fname|outfilename|out-filename|fnfmt|fmtfn|fmt-filename|fmt-outputfn=s',
+    'outfn|outfname|out-filename|fnfmt|fmtfn|fmt-filename|fmt-outputfn=s',
     'modroot|module-root|module-dir=s',
     'locallib=s{,}',
     'verbose+',
@@ -68,14 +68,14 @@ GetOptions(
     '<>' => sub ($in) { push @input, $patharg->($in) }
 );
 
-dmsg(
-    my $cliopt = {
-        map {
-            my $ref = ref $clidest{$_};
-            ( $_ => ( $ref eq "SCALAR" ? $clidest{$_}->$* : $clidest{$_} ) )
-        } ( keys %clidest )
-    }
-);
+my $_cliopt = {
+    map {
+        my $ref = ref $clidest{$_};
+        ( $_ => ( $ref eq 'SCALAR' ? $clidest{$_}->$* : $clidest{$_} ) )
+    } ( keys %clidest )
+};
+
+dmsg($_cliopt);
 
 sub fatpack {
     $CWD = $modroot;
@@ -107,8 +107,6 @@ sub fatpack {
             ( s/^(.+)(?:\.pl)?$/$1/rg =~ $in->basename )
         );
 
-        dmsg $in, $outfn, $fatout;
-
         if ( my ($ext) = $in->basename =~ /\.(pl)$/i ) {
             $fatout .= ".$ext";
         }
@@ -120,4 +118,3 @@ sub fatpack {
 }
 
 fatpack()
-
