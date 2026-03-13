@@ -34,9 +34,10 @@ field $callback : param(on) = {};
 
 ADJUST {
     $handle->autoflush if $autoflush;
+    dmsg $self;
 }
 
-method $on_line ( $line, $line_no = undef ) {
+method on_line ( $line, $line_no = undef ) {
     $self->$_( $line, $line_no ) for $$callback{line}->@*;
 }
 
@@ -46,7 +47,7 @@ method PUSH (@list) {
         chomp $_ if $autochomp;
 
         #$_->( $self, $_ ) for $$callback{line}->@*;
-        $on_line->($_);
+        $self->on_line($_);
         $_
     } @list;
 
@@ -59,7 +60,7 @@ method STORE( $index, $value ) {
     chomp $value if $autochomp;
     $array[$index] = $value;
 
-    $on_line->( $value, $index );
+    $self->on_line( $value, $index );
 }
 
 method STORESIZE ($count) {

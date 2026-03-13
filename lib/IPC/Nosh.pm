@@ -61,16 +61,16 @@ ADJUST : params (
     $in = undef
       if $stdin_passthrough;
 
-    @$callback{@::cbparamkey} =
+    @$callback{@IPC::Nosh::cbparamkey} =
       map { $$on{$_} isa ARRAY ? $$on{$_}->@* : [ $$on{$_} // () ] }
-      @$on{@::cbparamkey};
+      @$on{@IPC::Nosh::cbparamkey};
 
     my %tiearg = (
         autoflush => $autoflush ? 1 : 0,
         autochomp => $autochomp ? 1 : 0
     );
 
-    $tiearg{on} = %$callback{@::cbparamkey};
+    $tiearg{on} = %$callback{@IPC::Nosh::cbparamkey};
 
     # $line: called with $line when child writes to STDOUT. this is the same as
     # passing a subroutine as $out
@@ -80,6 +80,8 @@ ADJUST : params (
     # $eof: called when a handle recieves EOF
     # $ipcfail: called after unrecoverable/unknown IPC errors
     # $success: called when child exits with 0
+
+    dmsg \%tiearg;
 
     $self->set_handle( $self->out, 'out', %tiearg );
     $self->set_handle(
