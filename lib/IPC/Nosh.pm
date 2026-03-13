@@ -61,7 +61,7 @@ ADJUST : params (
         autochomp => $autochomp ? 1 : 0
     );
 
-    $self->adjhelper( $on, \%tiearg, stdin_passthrough => $stdin_passthrough );
+    $self->adjhelper( $in, $out, $err, $on, \%tiearg, stdin_passthrough => $stdin_passthrough );
 
     $constructor = {
         stdin_passthrough => $stdin_passthrough,
@@ -74,7 +74,7 @@ ADJUST : params (
 
   };
 
-method $inithandles ( $hhref, $tieopt, %opt ) {
+method $inithandles ( $in, $out, $err, $tieopt, %opt ) {
     $in = undef
       if $opt{stdin_pt};
 
@@ -87,7 +87,7 @@ method $inithandles ( $hhref, $tieopt, %opt ) {
     );
 
     foreach my ( $k, $v )
-      ( mesh [qw(inh outh errh)], [ $hhref->@{qw(in out err)} ] )
+      ( mesh [qw(inh outh errh)], [ $in, $out, $err ] )
     {
         if ( ref $v eq 'ARRAY' ) {
 
@@ -97,7 +97,7 @@ method $inithandles ( $hhref, $tieopt, %opt ) {
             # ( on => { %$callback{@::cbparamkey} }, %tiearg ) );
             #push $self->$destname->@*, $destref
             # $self->$k->@* = $v;
-            ...;
+	    # ...
         }
         elsif ( ref $v eq 'CODE' ) {
 
@@ -144,10 +144,10 @@ method $initcb ( $cbhref, %opt ) {
     $callback;
 }
 
-method adjhelper( $on, $tieopt, %opt ) {
+method adjhelper( $in, $out, $err, $on, $tieopt, %opt ) {
     $callback = $self->$initcb( $on, %opt );
     $$tieopt{on} = $callback;
-    $self->$inithandles( $tie, $tieopt, %opt );
+    $self->$inithandles( $in, $out, $err, $tieopt, %opt ) 
 }
 
 method $run ( $cmd, %opt ) {
