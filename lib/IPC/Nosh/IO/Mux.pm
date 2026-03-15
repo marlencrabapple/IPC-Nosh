@@ -7,12 +7,14 @@ class IPC::Nosh::IO::Mux;
 use utf8;
 use v5.40;
 
+use List::Util 'none';
 use IO::Handle;
 use Const::Fast;
 use IPC::Nosh::IO;
 
 use vars qw'@ISA @EXPORT';
 
+const our @EVENTLIST => qw'line error exiterr nonzero exit eof ipcfail success';
 const our %mux_default => (
     fd        => *STDOUT,
     mode      => 'w',
@@ -30,11 +32,28 @@ field $handle : param : reader = IO::Handle->new_from_fd( $fd, $mode );
 field @array;
 field $tied;
 
-field $callback : param(on) = {};
+field $callback : param(on) : accessor(on) = {};
 
 ADJUST {
-    $handle->autoflush if $autoflush;
+    foreach my ( $e, $val ) (%$callback) {
+        if ( none { $e eq $_ } @IPC::Nosh::IO::Mux::EVENTLIST ) {
+            err "'$e' is not a valid key for '\$on'";
+            next;
+        }
 
+        $$callback{$e} //= [];
+
+        if ( $val isa ARRAY ) {
+            push $$callback{$e}->@*, @$val;
+
+        }
+        elsif ( $val isa CODE ) {
+            push $$callback{$e}->@*, $val;
+        }
+    }
+
+    $handle->autoflush if $autoflush;
+    dmsg $self
 }
 
 method on_line ( $line, $line_no = undef ) {
@@ -43,10 +62,11 @@ method on_line ( $line, $line_no = undef ) {
 
 method PUSH (@list) {
     push @array, map {
-        $handle->print($_);
+
+        # $handle->print($_);
         chomp $_ if $autochomp;
 
-        #$_->( $self, $_ ) for $$callback{line}->@*;
+        $_->( $self, $_ ) for $$callback{line}->@*;
         $self->on_line($_);
         $_
     } @list;
@@ -55,7 +75,8 @@ method PUSH (@list) {
 }
 
 method STORE( $index, $value ) {
-    $handle->print($value);
+
+    # $handle->print($value);
 
     chomp $value if $autochomp;
     $array[$index] = $value;

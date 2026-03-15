@@ -46,7 +46,7 @@ field $handle_aref;
 field $handle_fh;
 field $handle_coderef;
 
-field $callback : accessor(on) = {};
+field $callback : accessor(on) = { ipcfail => [] };
 
 field $tie : reader = {};
 
@@ -61,7 +61,10 @@ ADJUST : params (
   : $err = $self->err
   ) {
 
+    push $$callback{ipcfail}->@*, delete $$on{ipcfail} if $$on{ipcfail};
+
     my %tiearg = (
+        on        => $on,
         autoflush => $autoflush ? 1 : 0,
         autochomp => $autochomp ? 1 : 0
     );
@@ -84,15 +87,6 @@ method $inithandles ( $in, $out, $err, $tieopt, %opt ) {
     $in = undef
       if $opt{stdin_passthrough};
 
-    @$tie{qw(outh errh)} = (
-        $self->tie_handle( $out, %$tieopt ),
-        $self->tie_handle(
-            $err,
-            fd => *STDERR,
-            %$tieopt
-        )
-    );
-
     foreach my ( $k, $v ) ( mesh [qw(inh outh errh)], [ $in, $out, $err ] ) {
 
         if ( ref $v eq 'ARRAY' ) {
@@ -110,7 +104,8 @@ method $inithandles ( $in, $out, $err, $tieopt, %opt ) {
 
             #push $callback->{}->@*, $destref
 
-            push $callback->{ ( $k =~ s/$FH_SUFFIX_RE//r ) }{line}->@*, $v;
+            # push $callback->{ ( $k =~ s/$FH_SUFFIX_RE//r ) }{line}->@*, $v;
+            push $v->callback->{ ( $k =~ s/$FH_SUFFIX_RE//r ) }{line}->@*, $v;
         }
         elsif ( ref $v eq 'GLOB' ) {
 
@@ -123,37 +118,10 @@ method $inithandles ( $in, $out, $err, $tieopt, %opt ) {
     $tie;
 }
 
-method $initcb ( $cbhref, %opt ) {
-
-    # $line: called with $line when child writes to STDOUT. this is the same as
-    # passing a subroutine as $out
-    # $error: called when child writes to STDERR
-    # $exiterr, $nonzero: called when chlld exits with a nonzero status
-    # $exit: called when the child process exits
-    # $eof: called when a handle recieves EOF
-    # $ipcfail: called after unrecoverable/unknown IPC errors
-    # $success: called when child exits with 0
-
-    foreach my ( $e, $val ) (%$cbhref) {
-        if ( none { $e eq $_ } @EVENTLIST ) {
-            err "'$e' is not a valid key for '\$on'";
-            next;
-        }
-
-        if ( $val isa ARRAY ) {
-            $$callback{$e} = $val;
-        }
-        elsif ( $val isa CODE ) {
-            $$callback{$e} = [$val];
-        }
-    }
-
-    $callback;
-}
-
 method adjhelper( $in, $out, $err, $on, $tieopt, %opt ) {
-    $callback = $self->$initcb( $on, %opt );
-    $$tieopt{on} = $callback;
+
+    # dmsg( $on, $tieopt, \%opt, $callback );
+    # $$tieopt{on} = $callback;
     $self->$inithandles( $in, $out, $err, $tieopt, %opt );
 }
 
@@ -191,13 +159,15 @@ method $run ( $cmd, %opt ) {
         ( $status, $oserr ) = ( $?, $! );
 
         if ($ipcfail) {
+            dmsg $$callback{ipcfail};
             $_->( $self, ret => $ipcfail, args => [ $cmd, $in, $out, $err ] )
               for $$callback{ipcfail}->@*;
         }
 
     }
     catch ($e) {
-        dmsg $self;
+
+        # dmsg $self;
         fatal($e);
     }
 
