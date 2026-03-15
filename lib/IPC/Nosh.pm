@@ -6,8 +6,11 @@ class IPC::Nosh;
 
 our $VERSION = "0.01";
 
-use base 'Class::Exporter';
+use parent 'Exporter';
 use vars qw'@EXPORT @EXPORT_OK';
+
+# use base 'Class::Exporter';
+#use vars qw'@EXPORT @EXPORT_OK';
 
 use utf8;
 use v5.40;
@@ -16,6 +19,7 @@ use IPC::Run3;
 use IO::Handle;
 use Const::Fast;
 use List::Util qw'mesh none';
+use Syntax::Keyword::Try;
 use Syntax::Keyword::Dynamically;
 
 use IPC::Nosh::IO::Mux;
@@ -44,24 +48,26 @@ field $handle_coderef;
 
 field $callback : accessor(on) = {};
 
-field $tie : reader;
+field $tie : reader = {};
 
 ADJUST : params (
   : $autoflush         //= undef,
   : $autochomp         //= undef,
   : $stdin_passthrough //= undef,
   : $on = {},
-  : $in = \undef,
+  : $in = $self->in,
 
-  : $out = [],
-  : $err = []
+  : $out = $self->out,
+  : $err = $self->err
   ) {
+
     my %tiearg = (
         autoflush => $autoflush ? 1 : 0,
         autochomp => $autochomp ? 1 : 0
     );
 
-    $self->adjhelper( $in, $out, $err, $on, \%tiearg, stdin_passthrough => $stdin_passthrough );
+    $self->adjhelper( $in, $out, $err, $on, \%tiearg,
+        stdin_passthrough => $stdin_passthrough );
 
     $constructor = {
         stdin_passthrough => $stdin_passthrough,
@@ -76,19 +82,19 @@ ADJUST : params (
 
 method $inithandles ( $in, $out, $err, $tieopt, %opt ) {
     $in = undef
-      if $opt{stdin_pt};
+      if $opt{stdin_passthrough};
 
-    $self->set_handle( $out, 'out', %$tieopt );
-
-    $self->set_handle(
-        $err, 'err',
-        fd => *STDERR,
-        %$tieopt
+    @$tie{qw(outh errh)} = (
+        $self->tie_handle( $out, %$tieopt ),
+        $self->tie_handle(
+            $err,
+            fd => *STDERR,
+            %$tieopt
+        )
     );
 
-    foreach my ( $k, $v )
-      ( mesh [qw(inh outh errh)], [ $in, $out, $err ] )
-    {
+    foreach my ( $k, $v ) ( mesh [qw(inh outh errh)], [ $in, $out, $err ] ) {
+
         if ( ref $v eq 'ARRAY' ) {
 
             # Used as backing storage or kept in synccbp
@@ -97,13 +103,14 @@ method $inithandles ( $in, $out, $err, $tieopt, %opt ) {
             # ( on => { %$callback{@::cbparamkey} }, %tiearg ) );
             #push $self->$destname->@*, $destref
             # $self->$k->@* = $v;
-	    # ...
+            # ...
+            $$tie{$k} = $self->tie_handle( $v, %$tieopt );
         }
         elsif ( ref $v eq 'CODE' ) {
 
             #push $callback->{}->@*, $destref
 
-            push $callback->{ $k =~ s/$FH_SUFFIX_RE//r }{line}->@*, $v;
+            push $callback->{ ( $k =~ s/$FH_SUFFIX_RE//r ) }{line}->@*, $v;
         }
         elsif ( ref $v eq 'GLOB' ) {
 
@@ -147,7 +154,7 @@ method $initcb ( $cbhref, %opt ) {
 method adjhelper( $in, $out, $err, $on, $tieopt, %opt ) {
     $callback = $self->$initcb( $on, %opt );
     $$tieopt{on} = $callback;
-    $self->$inithandles( $in, $out, $err, $tieopt, %opt ) 
+    $self->$inithandles( $in, $out, $err, $tieopt, %opt );
 }
 
 method $run ( $cmd, %opt ) {
@@ -178,12 +185,20 @@ method $run ( $cmd, %opt ) {
     }
 
     # Exec the command with tied handles and collect exit status
-    my $ipcfail = run3( $cmd, $in, $out, $err );
-    ( $status, $oserr ) = ( $?, $! );
+    try {
+        my $ipcfail = run3( $cmd, $in, $out, $err );
 
-    if ($ipcfail) {
-        $_->( $self, ret => $ipcfail, args => [ $cmd, $in, $out, $err ] )
-          for $$callback{ipcfail}->@*;
+        ( $status, $oserr ) = ( $?, $! );
+
+        if ($ipcfail) {
+            $_->( $self, ret => $ipcfail, args => [ $cmd, $in, $out, $err ] )
+              for $$callback{ipcfail}->@*;
+        }
+
+    }
+    catch ($e) {
+        dmsg $self;
+        fatal($e);
     }
 
     # Success
@@ -201,17 +216,26 @@ method $run ( $cmd, %opt ) {
     $self;
 }
 
-method run( $cmd, %opt ) {
-    dynamically $constructor = {} unless $opt{reuse_config};
-
-    dynamically $self =
-      scalar keys %opt
-      ? __PACKAGE__->new( %$constructor, %opt )
-      : $self
-      unless $opt{use_imported};
-
-    $self->$run( $cmd, %opt )    #, %cli );
+method runcmd( $cmd, %opt ) {
+    $self->$run( $cmd, %opt );
 }
+
+sub run ( $cmd, %opt ) {
+    my $self = IPC::Nosh->new(%opt);
+    $self->runcmd( $cmd, %opt );
+}
+
+# method run( $cmd, %opt ) {
+#     dynamically $constructor = {} unless $opt{reuse_config};
+
+#     dynamically $self =
+#       scalar keys %opt
+#       ? __PACKAGE__->new( %$constructor, %opt )
+#       : $self
+#       unless $opt{use_imported};
+
+#     $self->$run( $cmd, %opt )    #, %cli );
+# }
 
 method tie_handle( $aref, %opt ) {
     my %tiearg = %opt;
@@ -219,21 +243,13 @@ method tie_handle( $aref, %opt ) {
     tie @$aref, 'IPC::Nosh::IO::Mux', %tiearg;
 }
 
-method set_handle ( $aref, $hid, %opt ) {
-    return $self->$hid unless $aref || $aref == $out;
-
-    # my $meth = "${tiekey}h";
-    # $self->$meth($aref, %opt)
-    $$tie{$hid} = $self->tie_handle( $aref, %opt );
-}
-
 method outh ( $aref //= $out, %opt ) {
 
-    $self->set_handle( $aref, 'out', %opt );
+    $$tie{outh} = $self->set_handle( $aref, 'out', %opt );
 }
 
 method errh ( $aref //= $err, %opt ) {
-    $self->set_handle( $aref, 'err', %opt );
+    $$tie{errh} = $self->set_handle( $aref, 'err', %opt );
 }
 
 __END__

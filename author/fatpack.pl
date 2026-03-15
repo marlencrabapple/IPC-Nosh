@@ -98,7 +98,10 @@ sub fatpack {
         binmode STDERR, ":encoding(UTF-8)";
         info( "Running " . join " ", @cmd );
 
-        run( \@cmd, out => \@fatlines, autoflush => 1, autochomp => 1 );
+        my $run =
+          run( \@cmd, out => \@fatlines, autoflush => 1, autochomp => 1 );
+
+        dmsg $run;
 
         $fatstr = join "\n", @fatlines;
 
@@ -106,10 +109,6 @@ sub fatpack {
             ( $outfn || '%s.fat' ),
             ( s/^(.+)(?:\.pl)?$/$1/rg =~ $in->basename )
         );
-
-        if ( my ($ext) = $in->basename =~ /\.(pl)$/i ) {
-            $fatout .= ".$ext";
-        }
 
         path("$outdir/$fatout")->spew_utf8($fatstr);
 

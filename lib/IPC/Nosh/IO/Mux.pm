@@ -24,7 +24,7 @@ field $fd        : param //= *STDOUT;
 field $mode      : param //= 'w';
 field $autochomp : param //= undef;
 field $autoflush : param //= undef;
-field $mux_defaultopt : reader = \%mux_default;
+field $mux_defaultopt : reader = {%mux_default};
 
 field $handle : param : reader = IO::Handle->new_from_fd( $fd, $mode );
 field @array;
@@ -34,7 +34,7 @@ field $callback : param(on) = {};
 
 ADJUST {
     $handle->autoflush if $autoflush;
-    dmsg $self;
+
 }
 
 method on_line ( $line, $line_no = undef ) {
