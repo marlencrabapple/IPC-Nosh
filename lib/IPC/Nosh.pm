@@ -89,30 +89,22 @@ method $inithandles ( $in, $out, $err, $tieopt, %opt ) {
 
     foreach my ( $k, $v ) ( mesh [qw(inh outh errh)], [ $in, $out, $err ] ) {
 
-        if ( ref $v eq 'ARRAY' ) {
+        if ( $v isa ARRAY ) {
 
             # Used as backing storage or kept in synccbp
             # with replcaement more  suitable for job load
-            # $self->set_handle( $out, 'out',
-            # ( on => { %$callback{@::cbparamkey} }, %tiearg ) );
-            #push $self->$destname->@*, $destref
-            # $self->$k->@* = $v;
-            # ...
             $$tie{$k} = $self->tie_handle( $v, %$tieopt );
         }
-        elsif ( ref $v eq 'CODE' ) {
-
-            #push $callback->{}->@*, $destref
-
-            # push $callback->{ ( $k =~ s/$FH_SUFFIX_RE//r ) }{line}->@*, $v;
+        elsif ( $v isa CODE ) {
             push $v->callback->{ ( $k =~ s/$FH_SUFFIX_RE//r ) }{line}->@*, $v;
         }
-        elsif ( ref $v eq 'GLOB' ) {
+        elsif ( $v isa GLOB ) {
 
             # File handle is appended to by line with respects to existing
             # binmode
-            ...;
+            $$tie{$k} = $self->tie_handle( $v, %$tieopt, fh => $v );
         }
+
     }
 
     $tie;
@@ -120,37 +112,10 @@ method $inithandles ( $in, $out, $err, $tieopt, %opt ) {
 
 method adjhelper( $in, $out, $err, $on, $tieopt, %opt ) {
 
-    # dmsg( $on, $tieopt, \%opt, $callback );
-    # $$tieopt{on} = $callback;
     $self->$inithandles( $in, $out, $err, $tieopt, %opt );
 }
 
 method $run ( $cmd, %opt ) {
-    foreach my ( $name, $ref ) ( %opt{qw(in out err)} ) {
-        if ( $ref isa HASH ) {
-            foreach my ( $opt, $val )
-              ( $ref->%{qw(autochomp autoflush line mode fd)} )
-            {
-                dynamically $tie->{$ref}{$opt} = $val;
-            }
-        }
-        elsif ( $ref isa ARRAY ) {
-            $self->set_handle(
-                $ref, $name,
-                ( IPC::Nosh::Mux->mux_default_args ),
-                ( $opt{reuse_config} ? %$constructor : () )
-            );
-        }
-        elsif ( $ref isa GLOB ) {
-            ...;
-        }
-        elsif ( $ref isa CODE ) {
-
-            # $ref->();
-            ...;
-        }
-
-    }
 
     # Exec the command with tied handles and collect exit status
     try {
@@ -159,7 +124,7 @@ method $run ( $cmd, %opt ) {
         ( $status, $oserr ) = ( $?, $! );
 
         if ($ipcfail) {
-            dmsg $$callback{ipcfail};
+
             $_->( $self, ret => $ipcfail, args => [ $cmd, $in, $out, $err ] )
               for $$callback{ipcfail}->@*;
         }
@@ -167,7 +132,6 @@ method $run ( $cmd, %opt ) {
     }
     catch ($e) {
 
-        # dmsg $self;
         fatal($e);
     }
 
@@ -190,36 +154,14 @@ method runcmd( $cmd, %opt ) {
     $self->$run( $cmd, %opt );
 }
 
+method tie_handle : common ( $aref, %opt ) {
+    tie @$aref, 'IPC::Nosh::IO::Mux', %opt;
+    dmsg $aref, \%opt, $tied;
+}
+
 sub run ( $cmd, %opt ) {
     my $self = IPC::Nosh->new(%opt);
     $self->runcmd( $cmd, %opt );
-}
-
-# method run( $cmd, %opt ) {
-#     dynamically $constructor = {} unless $opt{reuse_config};
-
-#     dynamically $self =
-#       scalar keys %opt
-#       ? __PACKAGE__->new( %$constructor, %opt )
-#       : $self
-#       unless $opt{use_imported};
-
-#     $self->$run( $cmd, %opt )    #, %cli );
-# }
-
-method tie_handle( $aref, %opt ) {
-    my %tiearg = %opt;
-
-    tie @$aref, 'IPC::Nosh::IO::Mux', %tiearg;
-}
-
-method outh ( $aref //= $out, %opt ) {
-
-    $$tie{outh} = $self->set_handle( $aref, 'out', %opt );
-}
-
-method errh ( $aref //= $err, %opt ) {
-    $$tie{errh} = $self->set_handle( $aref, 'err', %opt );
 }
 
 __END__
@@ -228,15 +170,16 @@ __END__
 
 =head1 NAME
 
-IPC::Cmd - It's new $module
+IPC::Nosh - no-shell system commands and subprocess interaction
 
 =head1 SYNOPSIS
 
-    use IPC::Cmd;
+    use IPC::Nosh; # run() is exported by default
+    my $run = run(\@cmd, %options)
 
 =head1 DESCRIPTION
 
-IPC::Cmd is ...
+IPC::Nosh is a easy to use tool to multiplex data to and from external commands.
 
 =head1 LICENSE
 
@@ -248,7 +191,7 @@ it under the same terms as Perl itself.
 
 =head1 AUTHOR
 
-Ian P Bradley E<lt>ian.bradley@studiocrabapple.comE<gt>
+Ian P Bradley E<lt>ian@pennyfoss.orgE<gt>
 
 =cut
 

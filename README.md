@@ -1,10 +1,11 @@
 # NAME
 
-IPC::Cmd - It's new $module
+IPC::Nosh - No shell system commands and subprocess interaction
 
 # SYNOPSIS
 
-    use IPC::Cmd;
+    use IPC::Nosh; # run() is exported by default
+    my $run = run(\@cmd, %options)
 
 # DESCRIPTION
 
@@ -19,4 +20,4 @@ it under the same terms as Perl itself.
 
 # AUTHOR
 
-Ian P Bradley <ian.bradley@studiocrabapple.com>
+Ian P Bradley <ian@pennyfoss.org>

@@ -59,7 +59,7 @@ const our $ltrimtab_re => qr/^\t/;
 const our $lb_re       => qr/\R/;
 
 method dmsg {
-    return unless $debug;
+    return unless $debug // $ENV{DEBUG};
     my @caller = caller 1;
 
     local $Data::Dumper::Names::UpLevel = $ddn_uplvl;
