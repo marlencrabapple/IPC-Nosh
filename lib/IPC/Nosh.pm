@@ -137,7 +137,7 @@ method $run ( $cmd, %opt ) {
         elsif ( $ref isa ARRAY ) {
             $self->set_handle(
                 $ref, $name,
-                IPC::Nosh::Mux->mux_defaultopt,
+                ( IPC::Nosh::Mux->mux_default_args ),
                 ( $opt{reuse_config} ? %$constructor : () )
             );
         }

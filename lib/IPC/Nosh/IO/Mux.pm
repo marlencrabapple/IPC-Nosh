@@ -15,7 +15,7 @@ use IPC::Nosh::IO;
 use vars qw'@ISA @EXPORT';
 
 const our @EVENTLIST => qw'line error exiterr nonzero exit eof ipcfail success';
-const our %mux_default => (
+const our %MUX_DEFAULT => (
     fd        => *STDOUT,
     mode      => 'w',
     autochomp => undef,
@@ -26,7 +26,6 @@ field $fd        : param //= *STDOUT;
 field $mode      : param //= 'w';
 field $autochomp : param //= undef;
 field $autoflush : param //= undef;
-field $mux_defaultopt : reader = {%mux_default};
 
 field $handle : param : reader = IO::Handle->new_from_fd( $fd, $mode );
 field @array;
@@ -54,6 +53,10 @@ ADJUST {
 
     $handle->autoflush if $autoflush;
     dmsg $self
+}
+
+method mux_default_args : common {
+    %MUX_DEFAULT;
 }
 
 method on_line ( $line, $line_no = undef ) {
