@@ -1,5 +1,5 @@
 {
-   "abstract" : "No shell system commands and subprocess interaction",
+   "abstract" : "no-shell system commands and subprocess interaction",
    "author" : [
       "Ian P Bradley <ian@pennyfoss.org>"
    ],

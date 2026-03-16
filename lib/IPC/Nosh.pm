@@ -9,9 +9,6 @@ our $VERSION = "0.01";
 use parent 'Exporter';
 use vars qw'@EXPORT @EXPORT_OK';
 
-# use base 'Class::Exporter';
-#use vars qw'@EXPORT @EXPORT_OK';
-
 use utf8;
 use v5.40;
 
@@ -30,9 +27,7 @@ use IPC::Nosh::IO;
 const our @EVENTLIST => qw'line error exiterr nonzero exit eof ipcfail success';
 const our $FH_SUFFIX_RE => qr/h$/;
 
-field $constructor;
-
-field $same_instance : param(use_imported) = 0;
+# field $same_instance : param(use_imported) = 0;
 field $debug //= $ENV{DEBUG};
 
 field $in  : reader = \undef;
@@ -48,7 +43,7 @@ field $handle_coderef;
 
 field $callback : accessor(on) = { ipcfail => [] };
 
-field $tie : reader = {};
+field $tie : reader : param = {};
 
 ADJUST : params (
   : $autoflush         //= undef,
@@ -72,47 +67,49 @@ ADJUST : params (
     $self->adjhelper( $in, $out, $err, $on, \%tiearg,
         stdin_passthrough => $stdin_passthrough );
 
-    $constructor = {
-        stdin_passthrough => $stdin_passthrough,
-        autochomp         => $autochomp,
-        autoflush         => $autoflush,
-        in                => $self->in,
-        out               => $self->out,
-        err               => $self->err
-    };
-
   };
 
 method $inithandles ( $in, $out, $err, $tieopt, %opt ) {
     $in = undef
       if $opt{stdin_passthrough};
 
+    dmsg \%opt;
+
     foreach my ( $k, $v ) ( mesh [qw(inh outh errh)], [ $in, $out, $err ] ) {
+        dmsg $k, $v, ref $v;
 
         if ( $v isa ARRAY ) {
+            tie @$v, 'IPC::Nosh::IO::Mux', %$tieopt;
+        }
 
-            # Used as backing storage or kept in synccbp
-            # with replcaement more  suitable for job load
-            $$tie{$k} = $self->tie_handle( $v, %$tieopt );
-        }
-        elsif ( $v isa CODE ) {
-            push $v->callback->{ ( $k =~ s/$FH_SUFFIX_RE//r ) }{line}->@*, $v;
-        }
+        # elsif ( $v isa CODE ) {
+        #     push $v->callback->{ ( $k =~ s/$FH_SUFFIX_RE//r ) }{line}->@*, $v;
+        # }
         elsif ( $v isa GLOB ) {
+            tie @$v, 'IPC::Nosh::IO::Mux', %$tieopt, fh => $v;
 
-            # File handle is appended to by line with respects to existing
-            # binmode
-            $$tie{$k} = $self->tie_handle( $v, %$tieopt, fh => $v );
+        }
+        elsif ( !defined ref $v || !defined $v ) {
+
+            # tie @$v, 'IPC::Nosh::IO::Mux', %$tieopt;
+            # $$tie{$k} = tied @$v;
+
+            #   IPC::Nosh->tie_handle( ( $k =~ s/h$//r ), %$tieopt );
         }
 
+        $$tie{$k} = tied @$v;
+
+        dmsg $$tie{$k}, ref $$tie{$k};
     }
 
-    $tie;
+    # dmsg $self->tie, $tie;
 }
 
 method adjhelper( $in, $out, $err, $on, $tieopt, %opt ) {
 
     $self->$inithandles( $in, $out, $err, $tieopt, %opt );
+
+    #dmsg $self->tie;
 }
 
 method $run ( $cmd, %opt ) {
@@ -150,18 +147,13 @@ method $run ( $cmd, %opt ) {
     $self;
 }
 
-method runcmd( $cmd, %opt ) {
-    $self->$run( $cmd, %opt );
-}
-
-method tie_handle : common ( $aref, %opt ) {
-    tie @$aref, 'IPC::Nosh::IO::Mux', %opt;
-    dmsg $aref, \%opt, $tied;
+method runcmd($cmd) {
+    $self->$run($cmd);
 }
 
 sub run ( $cmd, %opt ) {
     my $self = IPC::Nosh->new(%opt);
-    $self->runcmd( $cmd, %opt );
+    my $run  = $self->runcmd($cmd)     # %opt{qw'in out err'} );
 }
 
 __END__

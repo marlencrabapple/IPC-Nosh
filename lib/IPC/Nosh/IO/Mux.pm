@@ -22,14 +22,15 @@ const our %MUX_DEFAULT => (
     autoflush => undef
 );
 
-field $fd        : param //= *STDOUT;
-field $mode      : param //= 'w';
-field $autochomp : param //= undef;
-field $autoflush : param //= undef;
+field $fd        : param : reader //= *STDOUT;
+field $mode      : param : reader //= 'w';
+field $autochomp : param : reader //= undef;
+field $autoflush : param : reader //= undef;
 
-field $handle : param : reader = IO::Handle->new_from_fd( $fd, $mode );
+field $handle : param : reader //= IO::Handle->new_from_fd( $fd, $mode );
 field @array;
-field $tied;
+
+# field $tied;
 
 field $callback : param(on) : accessor(on) = {};
 
@@ -139,6 +140,8 @@ method TIEARRAY : common ( %opt ) {
         grep { $opt{$_} }
           qw(on fd sub scalarref mode handle autochomp autoflush)
     );
+
+    dmsg $self, \%opt;
 
     $self;
 }

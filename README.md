@@ -1,6 +1,6 @@
 # NAME
 
-IPC::Nosh - No shell system commands and subprocess interaction
+IPC::Nosh - no-shell system commands and subprocess interaction
 
 # SYNOPSIS
 
@@ -9,7 +9,7 @@ IPC::Nosh - No shell system commands and subprocess interaction
 
 # DESCRIPTION
 
-IPC::Cmd is ...
+IPC::Nosh is a easy to use tool to multiplex data to and from external commands.
 
 # LICENSE
 

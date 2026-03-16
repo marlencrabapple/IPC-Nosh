@@ -18,30 +18,27 @@ use List::Util 'all';
 use IPC::Nosh;
 use IPC::Nosh::IO;
 
-field $argv : param;
-field $debug;
+field $argv  : param;
+field $debug : mutator;
 
 # field $stdin;
 field $autoflush : mutator;
 field $autochomp : mutator;
-field $verbose = 1;
+field $verbose   : mutator = 1;
 field @barearg;
 field $cmd : mutator = [];
 
 ADJUST {    #{ # :params (:$autochomp, :$autoflush) {
     my %clidest = ( cmd => $cmd );
 
-    dmsg $cmd;
-
     GetOptionsFromArray(
-        $argv, \%clidest, 'cmd=s{1,}',
+        $argv, \%clidest, 'cmd=s{,}',
         'verbose+',
         'version',
         'help|?', 'debug+',    #'stdin'
         'autoflush',
         'autochomp',
         '<>' => sub ($barearg) {
-
             push @$cmd, map { split /\s+/, $_ } $barearg;
         }
     );
@@ -50,28 +47,22 @@ ADJUST {    #{ # :params (:$autochomp, :$autoflush) {
         $self->$k = $v if $v;
     }
 
-    # dmsg( $autoflush, $autochomp )
+    dmsg \%clidest, $self
 }
 
 method nosh ( $asdf = undef, %fdsa ) {
 
-    # dmsg($self);
-    dmsg $self;
     my $run = run(
         $cmd,
-
         autoflush => $autoflush,
         autochomp => $autochomp,
-
-        # stdin     => $stdin
     );
+
     dmsg $self, $run;
 }
 
 method cli : common ($argv = \@ARGV) {
     my $self = $class->new( argv => $argv );
-
-    # dmsg($self, $self->autoflush, $self->autochomp);
     $self->nosh;
 }
 
