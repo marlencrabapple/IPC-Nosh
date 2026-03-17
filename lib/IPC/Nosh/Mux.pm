@@ -10,10 +10,12 @@ use v5.40;
 use List::Util 'none';
 use IO::Handle;
 use Const::Fast;
+use FileHandle;
 
 use IPC::Nosh::Common;
+use IPC::Nosh::Handle;
 
-const our @EVENTLIST => qw'line error exiterr nonzero exit eof ipcfail success';
+const our @EVENTLIST => qw'line eof';
 const our %MUX_DEFAULT => (
     fd        => *STDOUT,
     mode      => 'w',
@@ -26,14 +28,36 @@ field $mode      : param : reader = 'w';
 field $autochomp : param : reader = undef;
 field $autoflush : param : reader = undef;
 
-field $handle : param : reader = IO::Handle->new_from_fd( $fd, $mode );
+field $buff   : reader = undef;
+field $handle : reader = [];
 field @array;
 
 # name => [ coderef, ... ]
-field $callback : param(on) : accessor(on) = {};
+field $callback : accessor(on) = {};
 
-ADJUST {
-    foreach my ( $e, $val ) (%$callback) {
+ADJUST : params (:$fn) { push @$handle, IPC::Nosh::Handle->new( fn => $fn ) };
+
+ADJUST : params ( :$fh = [] ) {
+    if ( $fh isa ARRAY && scalar @$fh ) {
+        foreach my $fh (@$fh) {
+            if ( $fh isa HASH ) {    # allowed keys: fh, fileno, ...
+                ...;
+            }
+            elsif ( $fh isa GLOB ) {
+                push @$handle, IPC::Nosh::Handle->new( fh => $fh );
+            }
+        }
+    }
+    else {
+        $buff = Stream::Buffered->new();
+
+        push $self->handle->@*,
+          FileHandle->new( $buff->rewind, $$handle{mode} || $mode );
+    }
+};
+
+ADJUST : params (:$on) {
+    foreach my ( $e, $val ) (%$on) {
         if ( none { $e eq $_ } @IPC::Nosh::Mux::EVENTLIST ) {
             say STDERR "'$e' is not a valid key for '\$on'";
             next;
@@ -53,7 +77,7 @@ ADJUST {
     $handle->autoflush if $autoflush;
 
     # dmsg $self
-}
+};
 
 method mux_default_args : common {
     %MUX_DEFAULT;

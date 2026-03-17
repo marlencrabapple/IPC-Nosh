@@ -13,28 +13,64 @@ use vars '@EXPORT';
 
 @EXPORT = qw(run);
 
-use IO::Handle;
+use Const::Fast;
+use IPC::Run3;
 use IPC::Nosh::Mux;
 use IPC::Nosh::Common;
 
 # name => [ coderef, ... ]
-field $global_cb : param(on);
+field $global_cb : = {};
 
-field $global_autochomp : param(autochomp);
-field $global_autoflush : param(autoflush);
+field $global_autochomp : param(autochomp) = 0;
+field $global_autoflush : param(autoflush) = 0;
 
 field $cmd : param;
-field $in  : param = undef;
-field $out : param = IO::Handle->new_from_fd(*STDOUT)->('w');
-field $err : param = IO::Handle->new_from_fd(*STDERR)->('w');
+
+field $in  : reader = undef;
+field $out : reader = [];
+field $err : reader = [];
 
 field $status;
 field $oserr;
 
+field $tied = {};
+
+ADJUST : params (:$in, :$out, :$err) {
+    foreach my ( $k, $v ) ( in => $in, out => $out, err => $err ) {
+        if (
+            my $mux = $self->mux_io(
+                $k, $v,
+                autochomp => $global_autochomp,
+                autoflush => $global_autoflush
+            )
+          )
+        {
+            $$tied{$k} = $mux;
+        }
+    }
+};
+
+ADJUST : params (:$on) {
+    const my @cballow =>
+      qw'line error exiterr nonzero exit eof ipcfail success';
+
+    @$global_cb{@cballow} =
+      map { $$on{$_} isa ARRAY ? $$on{$_}->@* : [ $$on{$_} // () ] }
+      @$global_cb{@cballow};
+};
+
 method mux_io( $name, $io, %arg ) {
     my $tied;
-    my %tieopt = %arg{qw'autochomp autoflush on'};
 
+    my %tieopt = %arg{qw'handle autochomp autoflush on'};
+    push $tieopt{on}->@*, $global_cb{line} if $global_cb{line};
+
+    if ( $io isa 'HASH' ) {
+
+        # %tieopt = $$io{qw'tieopt'}
+        # my $on = $$io{on};
+
+    }
     if ( $io isa ARRAY ) {
         $self->name = $io;
         $tied       = tie @$io, 'IPC::Nosh::Mux', %tieopt;
@@ -47,8 +83,12 @@ method mux_io( $name, $io, %arg ) {
         $tied = tie $self->name, 'IPC::Nosh::Mux', %tieopt, fh => $io;
     }
     elsif ( $io isa SCALAR && !$$io ) {
-        $self->name = $$io;
+        my $meta = Object::Pad::MOP::Class->for_caller;
+        $meta->get_field($name)->value($io);
     }
+
+    dmsg $tied;
+    $tied;
 }
 
 method $run ($cmd) {
@@ -78,12 +118,16 @@ method $run ($cmd) {
         ) for $$global_cb{ipcfail}->@*;
     }
 
+    dmsg $self;
+
     $self;
 }
 
 sub run ( $cmd, %arg ) {
-    my $nosh =
-      IPC::Nosh->new( $cmd, @arg{qw'in out err on autoflush autochomp'} );
+    my $nosh = IPC::Nosh->new(
+        cmd => $cmd,
+        %arg{qw'in out err on autoflush autochomp'}
+    );
 
     $nosh->$run($cmd);
 }
