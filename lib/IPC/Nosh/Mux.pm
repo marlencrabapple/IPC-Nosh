@@ -8,9 +8,7 @@ use utf8;
 use v5.40;
 
 use List::Util 'none';
-use IO::Handle;
 use Const::Fast;
-use FileHandle;
 
 use IPC::Nosh::Common;
 use IPC::Nosh::Handle;

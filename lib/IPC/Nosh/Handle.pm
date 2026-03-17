@@ -33,12 +33,12 @@ ADJUST : params ( :$fd ) {
     $fileno = $fd
 };
 
-sub AUTOLOAD {
-    my ( $self, @args ) = @_;
-    our $AUTOLOAD;
+# sub AUTOLOAD {
+#     my ( $self, @args ) = @_;
+#     our $AUTOLOAD;
 
-    fatal "Unable to call method '$AUTOLOAD' on $handle"
-      unless $handle->can($AUTOLOAD);
+#     fatal "Unable to call method '$AUTOLOAD' on $handle"
+#       unless $handle->can($AUTOLOAD);
 
-    $handle->$AUTOLOAD;
-}
+#     $handle->$AUTOLOAD;
+# }

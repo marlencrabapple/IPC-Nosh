@@ -19,7 +19,7 @@ use IPC::Nosh::Mux;
 use IPC::Nosh::Common;
 
 # name => [ coderef, ... ]
-field $global_cb : = {};
+field $global_cb = {};
 
 field $global_autochomp : param(autochomp) = 0;
 field $global_autoflush : param(autoflush) = 0;
@@ -80,11 +80,13 @@ method mux_io( $name, $io, %arg ) {
           on => { line => $io };
     }
     elsif ( $io isa GLOB ) {
-        $tied = tie $self->name, 'IPC::Nosh::Mux', %tieopt, fh => $io;
+        $tied = tie $self->name->@*, 'IPC::Nosh::Mux', %tieopt, fh => $io;
     }
-    elsif ( $io isa SCALAR && !$$io ) {
-        my $meta = Object::Pad::MOP::Class->for_caller;
-        $meta->get_field($name)->value($io);
+    elsif ( ( $io isa SCALAR ) && !$$io ) {
+
+        # my $meta = Object::Pad::MOP::Class->for_caller;
+        # $meta->get_field($name)->value($io);
+        # $_set($name, $io)
     }
 
     dmsg $tied;
