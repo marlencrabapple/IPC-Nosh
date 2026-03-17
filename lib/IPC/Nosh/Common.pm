@@ -1,8 +1,8 @@
 use Object::Pad ':experimental(:all)';
 
-package IPC::Nosh::IO;
+package IPC::Nosh::Common;
 
-class IPC::Nosh::IO;
+class IPC::Nosh::Common;
 
 use utf8;
 use v5.40;
@@ -25,16 +25,6 @@ field $trace_indent : param : accessor = $ENV{DEBUG_INDENT}     // 1;
 field $skip_frames  : param : accessor = $ENV{DEBUG_SKIPFRAMES} // 1;
 
 method writeh( $line, $handle, %opt ) {
-    if ( my $prev = $fhcache{$handle} ) {
-        $handle = $prev unless $opt{newh};
-    }
-    else {
-        $handle = $fhcache{$handle} =
-          IO::Handle->new_from_fd( $handle, $opt{mode} // 'w' );
-
-        binmode $handle, $opt{binmode} // ":encoding(UTF-8)";
-    }
-
     if ( $line isa 'ARRAY' ) {
         $handle->print("$_\n") for $line->@*;
     }

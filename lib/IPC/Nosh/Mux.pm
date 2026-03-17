@@ -1,8 +1,8 @@
 use Object::Pad ':experimental(:all)';
 
-package IPC::Nosh::IO::Mux;
+package IPC::Nosh::Mux;
 
-class IPC::Nosh::IO::Mux;
+class IPC::Nosh::Mux;
 
 use utf8;
 use v5.40;
@@ -10,9 +10,8 @@ use v5.40;
 use List::Util 'none';
 use IO::Handle;
 use Const::Fast;
-use IPC::Nosh::IO;
 
-use vars qw'@ISA @EXPORT';
+use IPC::Nosh::Common;
 
 const our @EVENTLIST => qw'line error exiterr nonzero exit eof ipcfail success';
 const our %MUX_DEFAULT => (
@@ -22,22 +21,21 @@ const our %MUX_DEFAULT => (
     autoflush => undef
 );
 
-field $fd        : param : reader //= *STDOUT;
-field $mode      : param : reader //= 'w';
-field $autochomp : param : reader //= undef;
-field $autoflush : param : reader //= undef;
+field $fd        : param : reader = *STDOUT;
+field $mode      : param : reader = 'w';
+field $autochomp : param : reader = undef;
+field $autoflush : param : reader = undef;
 
-field $handle : param : reader //= IO::Handle->new_from_fd( $fd, $mode );
+field $handle : param : reader = IO::Handle->new_from_fd( $fd, $mode );
 field @array;
 
-# field $tied;
-
+# name => [ coderef, ... ]
 field $callback : param(on) : accessor(on) = {};
 
 ADJUST {
     foreach my ( $e, $val ) (%$callback) {
-        if ( none { $e eq $_ } @IPC::Nosh::IO::Mux::EVENTLIST ) {
-            err "'$e' is not a valid key for '\$on'";
+        if ( none { $e eq $_ } @IPC::Nosh::Mux::EVENTLIST ) {
+            say STDERR "'$e' is not a valid key for '\$on'";
             next;
         }
 
@@ -53,7 +51,8 @@ ADJUST {
     }
 
     $handle->autoflush if $autoflush;
-    dmsg $self
+
+    # dmsg $self
 }
 
 method mux_default_args : common {
@@ -67,20 +66,23 @@ method on_line ( $line, $line_no = undef ) {
 method PUSH (@list) {
     push @array, map {
 
-        # $handle->print($_);
+        $handle->print($_);
         chomp $_ if $autochomp;
 
-        $_->( $self, $_ ) for $$callback{line}->@*;
+        # $_->( $self, $_ ) for $$callback{line}->@*;
         $self->on_line($_);
         $_
     } @list;
+
+    use Data::Dumper;
+    warn Dumper( [caller] );
 
     $self->FETCHSIZE;
 }
 
 method STORE( $index, $value ) {
 
-    # $handle->print($value);
+    $handle->print($value);
 
     chomp $value if $autochomp;
     $array[$index] = $value;
@@ -141,7 +143,7 @@ method TIEARRAY : common ( %opt ) {
           qw(on fd sub scalarref mode handle autochomp autoflush)
     );
 
-    dmsg $self, \%opt;
+    # dmsg $self, \%opt;
 
     $self;
 }

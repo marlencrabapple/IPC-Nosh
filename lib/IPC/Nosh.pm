@@ -4,156 +4,88 @@ package IPC::Nosh;
 
 class IPC::Nosh;
 
+use v5.40;
+
 our $VERSION = "0.01";
 
 use parent 'Exporter';
-use vars qw'@EXPORT @EXPORT_OK';
+use vars '@EXPORT';
 
-use utf8;
-use v5.40;
+@EXPORT = qw(run);
 
-use IPC::Run3;
 use IO::Handle;
-use Const::Fast;
-use List::Util qw'mesh none';
-use Syntax::Keyword::Try;
-use Syntax::Keyword::Dynamically;
+use IPC::Nosh::Mux;
+use IPC::Nosh::Common;
 
-use IPC::Nosh::IO::Mux;
-use IPC::Nosh::IO;
+# name => [ coderef, ... ]
+field $global_cb : param(on);
 
-@EXPORT = 'run';
+field $global_autochomp : param(autochomp);
+field $global_autoflush : param(autoflush);
 
-const our @EVENTLIST => qw'line error exiterr nonzero exit eof ipcfail success';
-const our $FH_SUFFIX_RE => qr/h$/;
+field $cmd : param;
+field $in  : param = undef;
+field $out : param = IO::Handle->new_from_fd(*STDOUT)->('w');
+field $err : param = IO::Handle->new_from_fd(*STDERR)->('w');
 
-# field $same_instance : param(use_imported) = 0;
-field $debug //= $ENV{DEBUG};
+field $status;
+field $oserr;
 
-field $in  : reader = \undef;
-field $out : reader = [];
-field $err : reader = [];
+method mux_io( $name, $io, %arg ) {
+    my $tied;
+    my %tieopt = %arg{qw'autochomp autoflush on'};
 
-field $status : reader;
-field $oserr  : reader;
-
-field $handle_aref;
-field $handle_fh;
-field $handle_coderef;
-
-field $callback : accessor(on) = { ipcfail => [] };
-
-field $tie : reader : param = {};
-
-ADJUST : params (
-  : $autoflush         //= undef,
-  : $autochomp         //= undef,
-  : $stdin_passthrough //= undef,
-  : $on = {},
-  : $in = $self->in,
-
-  : $out = $self->out,
-  : $err = $self->err
-  ) {
-
-    push $$callback{ipcfail}->@*, delete $$on{ipcfail} if $$on{ipcfail};
-
-    my %tiearg = (
-        on        => $on,
-        autoflush => $autoflush ? 1 : 0,
-        autochomp => $autochomp ? 1 : 0
-    );
-
-    $self->adjhelper( $in, $out, $err, $on, \%tiearg,
-        stdin_passthrough => $stdin_passthrough );
-
-  };
-
-method $inithandles ( $in, $out, $err, $tieopt, %opt ) {
-    $in = undef
-      if $opt{stdin_passthrough};
-
-    dmsg \%opt;
-
-    foreach my ( $k, $v ) ( mesh [qw(inh outh errh)], [ $in, $out, $err ] ) {
-        dmsg $k, $v, ref $v;
-
-        if ( $v isa ARRAY ) {
-            tie @$v, 'IPC::Nosh::IO::Mux', %$tieopt;
-        }
-
-        # elsif ( $v isa CODE ) {
-        #     push $v->callback->{ ( $k =~ s/$FH_SUFFIX_RE//r ) }{line}->@*, $v;
-        # }
-        elsif ( $v isa GLOB ) {
-            tie @$v, 'IPC::Nosh::IO::Mux', %$tieopt, fh => $v;
-
-        }
-        elsif ( !defined ref $v || !defined $v ) {
-
-            # tie @$v, 'IPC::Nosh::IO::Mux', %$tieopt;
-            # $$tie{$k} = tied @$v;
-
-            #   IPC::Nosh->tie_handle( ( $k =~ s/h$//r ), %$tieopt );
-        }
-
-        $$tie{$k} = tied @$v;
-
-        dmsg $$tie{$k}, ref $$tie{$k};
+    if ( $io isa ARRAY ) {
+        $self->name = $io;
+        $tied       = tie @$io, 'IPC::Nosh::Mux', %tieopt;
     }
-
-    # dmsg $self->tie, $tie;
+    elsif ( $io isa CODE ) {
+        $tied = tie $self->$name->@*, 'IPC::Nosh::Mux', %tieopt,
+          on => { line => $io };
+    }
+    elsif ( $io isa GLOB ) {
+        $tied = tie $self->name, 'IPC::Nosh::Mux', %tieopt, fh => $io;
+    }
+    elsif ( $io isa SCALAR && !$$io ) {
+        $self->name = $$io;
+    }
 }
 
-method adjhelper( $in, $out, $err, $on, $tieopt, %opt ) {
-
-    $self->$inithandles( $in, $out, $err, $tieopt, %opt );
-
-    #dmsg $self->tie;
-}
-
-method $run ( $cmd, %opt ) {
-
-    # Exec the command with tied handles and collect exit status
+method $run ($cmd) {
     try {
         my $ipcfail = run3( $cmd, $in, $out, $err );
 
         ( $status, $oserr ) = ( $?, $! );
 
         if ($ipcfail) {
-
             $_->( $self, ret => $ipcfail, args => [ $cmd, $in, $out, $err ] )
-              for $$callback{ipcfail}->@*;
+              for $$global_cb{ipcfail}->@*;
         }
-
     }
     catch ($e) {
-
         fatal($e);
     }
 
     # Success
     if ( $status == 0 ) {
-        $_->($status) for $$callback{success}->@*;
+        $_->($status) for $global_cb->{success}->@*;
     }
     else {    # Failure (TODO: look into why some exit codes are over 255)
         $_->(
             $self,
             exit => { status => $status, os_errno => $oserr },
             args => [ $cmd, $in, $out, $err ]
-        ) for $$callback{ipcfail}->@*;
+        ) for $$global_cb{ipcfail}->@*;
     }
 
     $self;
 }
 
-method runcmd($cmd) {
-    $self->$run($cmd);
-}
+sub run ( $cmd, %arg ) {
+    my $nosh =
+      IPC::Nosh->new( $cmd, @arg{qw'in out err on autoflush autochomp'} );
 
-sub run ( $cmd, %opt ) {
-    my $self = IPC::Nosh->new(%opt);
-    my $run  = $self->runcmd($cmd)     # %opt{qw'in out err'} );
+    $nosh->$run($cmd);
 }
 
 __END__
@@ -162,28 +94,26 @@ __END__
 
 =head1 NAME
 
-IPC::Nosh - no-shell system commands and subprocess interaction
+IPC::Nosh - It's new $module
 
 =head1 SYNOPSIS
 
-    use IPC::Nosh; # run() is exported by default
-    my $run = run(\@cmd, %options)
+    use IPC::Nosh;
 
 =head1 DESCRIPTION
 
-IPC::Nosh is a easy to use tool to multiplex data to and from external commands.
+IPC::Nosh is ...
 
 =head1 LICENSE
 
-Copyright(C) Ian P Bradley .
+Copyright (C) Ian P Bradley.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
-
 =head1 AUTHOR
 
-Ian P Bradley E<lt>ian@pennyfoss.orgE<gt>
+Ian P Bradley E<lt>ian.bradley@studiocrabapple.comE<gt>
 
 =cut
 
