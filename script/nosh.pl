@@ -16,7 +16,7 @@ use Getopt::Long
 
 use List::Util 'all';
 use IPC::Nosh;
-use IPC::Nosh::IO;
+use IPC::Nosh::Common;
 
 field $argv  : param;
 field $debug : mutator;
@@ -36,8 +36,8 @@ ADJUST {    #{ # :params (:$autochomp, :$autoflush) {
         'verbose+',
         'version',
         'help|?', 'debug+',    #'stdin'
-        'autoflush',
-        'autochomp',
+        'autoflush!',
+        'autochomp!',
         '<>' => sub ($barearg) {
             push @$cmd, map { split /\s+/, $_ } $barearg;
         }
@@ -47,18 +47,19 @@ ADJUST {    #{ # :params (:$autochomp, :$autoflush) {
         $self->$k = $v if $v;
     }
 
-    dmsg \%clidest, $self
 }
 
 method nosh ( $asdf = undef, %fdsa ) {
 
     my $run = run(
         $cmd,
+        out => sub ($line) {
+            say $line;
+        },
         autoflush => $autoflush,
         autochomp => $autochomp,
     );
 
-    dmsg $self, $run;
 }
 
 method cli : common ($argv = \@ARGV) {
@@ -71,4 +72,10 @@ package main;
 use utf8;
 use v5.40;
 
-nosh->cli( \@ARGV )
+nosh->cli( \@ARGV );
+
+use lib 'lib';
+use IPC::Nosh::Mux;
+my @arr;
+
+tie @arr, 'IPC::Nosh::Mux', autochomp => 1, fn => './fsadfsdfsdf'

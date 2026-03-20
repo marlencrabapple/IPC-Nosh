@@ -7,8 +7,11 @@ class IPC::Nosh::Mux;
 use utf8;
 use v5.40;
 
-use List::Util 'none';
+use vars '@ISA';
+
+use List::Util qw'any none first';
 use Const::Fast;
+use Stream::Buffered;
 
 use IPC::Nosh::Common;
 use IPC::Nosh::Handle;
@@ -21,43 +24,75 @@ const our %MUX_DEFAULT => (
     autoflush => undef
 );
 
-field $fd        : param : reader = *STDOUT;
-field $mode      : param : reader = 'w';
-field $autochomp : param : reader = undef;
-field $autoflush : param : reader = undef;
+field $fileno    : reader(fd);        #//= *STDOUT;
+field $mode      : param : reader;    #//= $MUX_DEFAULT{mode};
+field $autochomp : param : reader //= undef;
+field $autoflush : param : reader //= undef;
 
-field $buff   : reader = undef;
+field $buff : reader //= undef;
+
+field $default_handle = IPC::Nosh::Handle->new(
+    fd   => $MUX_DEFAULT{fd},
+    mode => $MUX_DEFAULT{mode}
+);
+
 field $handle : reader = [];
+
 field @array;
 
 # name => [ coderef, ... ]
-field $callback : accessor(on) = {};
+field $callback : accessor(on) //= {};
 
-ADJUST : params (:$fn) { push @$handle, IPC::Nosh::Handle->new( fn => $fn ) };
+ADJUST : params (:$fn //= undef, :$fh //= undef, :$fd //= undef) {
+    my @argref    = ( \$fn, \$fh, \$fd );
+    my %handleopt = (
+        mode      => $mode,
+        autochomp => $autochomp,
+        autoflush => $autoflush
 
-ADJUST : params ( :$fh = [] ) {
-    if ( $fh isa ARRAY && scalar @$fh ) {
-        foreach my $fh (@$fh) {
-            if ( $fh isa HASH ) {    # allowed keys: fh, fileno, ...
-                ...;
+    );
+
+    foreach my $to_handle ( $fn, $fh, $fd ) {
+        if ($fn) {
+            push @$handle,
+              IPC::Nosh::Handle->new(
+                fn => $fn,
+                %handleopt
+              );
+        }
+        elsif ($fh) {
+            if ( $fh isa ARRAY && scalar @$fh ) {
+                foreach my $fh (@$fh) {
+                    if ( $fh isa HASH )
+                    {    # allowed keys autochomp, autoflush, ...
+                        ...;
+                    }
+                    elsif ( $fh isa GLOB ) {
+                        push @$handle,
+                          IPC::Nosh::Handle->new( fh => $fh, %handleopt );
+                    }
+                }
             }
-            elsif ( $fh isa GLOB ) {
-                push @$handle, IPC::Nosh::Handle->new( fh => $fh );
+            else {
+                $buff = Stream::Buffered->new();
+
+                push @$handle,
+                  IPC::Nosh::Handle->new(
+                    fh => $buff->rewind,
+                    %handleopt
+                  );
             }
         }
-    }
-    else {
-        $buff = Stream::Buffered->new();
-
-        push $self->handle->@*,
-          FileHandle->new( $buff->rewind, $$handle{mode} || $mode );
+        elsif ($fd) {
+            push @$handle, IO::Nosh::Handle->new( fd => $fd, %handleopt );
+        }
     }
 };
 
-ADJUST : params (:$on) {
+ADJUST : params (:$on //= {}) {
     foreach my ( $e, $val ) (%$on) {
         if ( none { $e eq $_ } @IPC::Nosh::Mux::EVENTLIST ) {
-            say STDERR "'$e' is not a valid key for '\$on'";
+            error "'$e' is not a valid key for '\$on'";
             next;
         }
 
@@ -65,17 +100,20 @@ ADJUST : params (:$on) {
 
         if ( $val isa ARRAY ) {
             push $$callback{$e}->@*, @$val;
-
         }
         elsif ( $val isa CODE ) {
             push $$callback{$e}->@*, $val;
         }
     }
 
-    $handle->autoflush if $autoflush;
-
-    # dmsg $self
 };
+
+ADJUST {
+    if ( none { $_ } map { $$callback{$_}->@* } keys %$callback, @$handle ) {
+        push @$handle, $default_handle;
+    }
+    dmsg $callback, $handle;
+}
 
 method mux_default_args : common {
     %MUX_DEFAULT;
@@ -87,29 +125,24 @@ method on_line ( $line, $line_no = undef ) {
 
 method PUSH (@list) {
     push @array, map {
-
-        $handle->print($_);
-        chomp $_ if $autochomp;
-
-        # $_->( $self, $_ ) for $$callback{line}->@*;
-        $self->on_line($_);
-        $_
+        my $line = $_;
+        chomp $line if $autochomp;
+        $_->say($line) for @$handle;
+        $self->on_line($line);
+        $line
     } @list;
-
-    use Data::Dumper;
-    warn Dumper( [caller] );
 
     $self->FETCHSIZE;
 }
 
 method STORE( $index, $value ) {
-
-    $handle->print($value);
-
     chomp $value if $autochomp;
-    $array[$index] = $value;
+    $_->say($value) for @$handle;
 
+    $array[$index] = $value;
     $self->on_line( $value, $index );
+
+    $index > $self->FETCHSIZE ? undef : $index;
 }
 
 method STORESIZE ($count) {
@@ -160,12 +193,22 @@ method DELETE ($index) {
 
 method TIEARRAY : common ( %opt ) {
     my $self = $class->new(
-        map  { $_ => $opt{$_} }
-        grep { $opt{$_} }
-          qw(on fd sub scalarref mode handle autochomp autoflush)
+        map  { ( $_ => $opt{$_} ) }
+        grep { $opt{$_} } qw(on fd sub mode fh fn autochomp autoflush)
     );
 
-    # dmsg $self, \%opt;
+    dmsg $self, \%opt;
 
     $self;
 }
+
+# TODO: reader methods
+
+method lines ( $name, $lines, %opt ) {
+    @array;
+}
+
+method lines_utf8 ( $name, $lines, %opt ) {
+    $self->lines( $name, $lines, ( encode => 'UTF-8' ) );
+}
+

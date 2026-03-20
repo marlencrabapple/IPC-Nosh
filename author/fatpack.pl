@@ -11,7 +11,7 @@ use Path::Tiny;
 use Getopt::Long qw(GetOptionsFromArray :config no_ignore_case auto_abbrev);
 
 use IPC::Nosh;
-use IPC::Nosh::IO;
+use IPC::Nosh::Common;
 
 our $modroot  = path(abs_path);
 our @input    = ( path("$modroot/script") );
@@ -81,16 +81,11 @@ sub fatpack {
     $CWD = $modroot;
     run( [qw(carton install)], out => [] );
 
-    #run( [qw(carton vendor)] );
-    #run( [qw(carmel)] );
-
     $ENV{PERL5LIB} = "$locallib:$modroot/lib";
 
     $outdir->mkdir unless -d $outdir;
-
+    dmsg \@input;
     foreach my $in ( map { $_->is_dir ? ( $_->children ) : $_ } @input ) {
-
-        #fatpack($in->children) if $in->is_dir;
         my @fatlines;
         my $fatstr = "";
         my @cmd    = ( qw(fatpack pack), $in );
