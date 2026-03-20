@@ -39,8 +39,8 @@ field $tied : accessor = {};
 
 ADJUST : params (:$in, :$out, :$err, :$on) {
     foreach my ( $k, $v ) ( in => $in, out => $out, err => $err ) {
-        $self->mux_io(
-            $k, $v isa ARRAY ? @$v : [$v],
+        $$tied{$k} = $self->mux_io(
+            $k, $v,
             autochomp => $global_autochomp,
             autoflush => $global_autoflush,
         );
@@ -68,7 +68,10 @@ method err {
 }
 
 method mux_io( $name, $io, %arg ) {
-    my %tied;
+
+    # my %tied;
+    my $tied;
+
     my %tieopt = %arg{qw'handle autochomp autoflush on'};
 
     #push $tieopt{on}->@*, $$global_cb{line} if $$global_cb{line};
@@ -80,35 +83,33 @@ method mux_io( $name, $io, %arg ) {
         ...;
     }
     if ( $io isa ARRAY ) {
-        $self->$name = $io;
-        $tied{io}    = $io;
-        $tied{mux}   = tie @$io, 'IPC::Nosh::Mux', %tieopt;
-        $tied{tie}   = tied @$io;
+        $tied = tie @$io, 'IPC::Nosh::Mux', %tieopt;
+
     }
     elsif ( $io isa CODE ) {
-        tie $self->$name->@*, 'IPC::Nosh::Mux', %tieopt, on => { line => $io };
-        $tied{$name} = $self->$name;
-        $tied{io}    = $io;
-        $tied{mux}   = tie @$io, 'IPC::Nosh::Mux', %tieopt;
-        $tied{tie}   = tied @$io;
+        my @array;
+        $tied = tie @array, 'IPC::Nosh::Mux', %tieopt, on => { line => $io };
+
     }
     elsif ( $io isa GLOB ) {
-        tie $self->$name->@*, 'IPC::Nosh::Mux', %tieopt, fh => $io;
-        $tied{$name} = $self->$name;
+        my @array;
+        $tied = tie @array, 'IPC::Nosh::Mux', %tieopt, fh => $io;
+
     }
     elsif ( $io isa SCALAR && $$io ) {
-        $tied{$name} = [];
-        tie $tied{$name}->@*, 'IPC::Nosh::Mux', %tieopt, fh => \"";
-    }
-    $tied{mux} = $$tied{$name} = \%tied;
+        my @array;
+        $tied = tie @array, 'IPC::Nosh::Mux', %tieopt, fn => $$io;
 
+    }
+
+    # $tied{mux} = $$tied{$name} = \%tied;
+    dmsg( $tied, $tied2 );
     $tied;
 }
 
 method $run ($cmd) {
     try {
-        # dmsg $cmd, $in, $out, $err;
-        my $ipcfail = run3( $cmd, %$tied{qw'in out err'}->@{qw'handle'} );
+        my $ipcfail = run3( $cmd, $$tied{in}, $$tied{out}, $$tied{err} );
 
         ( $status, $oserr ) = ( $?, $! );
 

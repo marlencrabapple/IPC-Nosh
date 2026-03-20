@@ -59,7 +59,7 @@ method nosh ( $asdf = undef, %fdsa ) {
         autoflush => $autoflush,
         autochomp => $autochomp,
     );
-    dmsg $run;
+
 }
 
 method cli : common ($argv = \@ARGV) {
@@ -72,10 +72,4 @@ package main;
 use utf8;
 use v5.40;
 
-nosh->cli( \@ARGV );
-
-use lib 'lib';
-use IPC::Nosh::Mux;
-my @arr;
-
-tie @arr, 'IPC::Nosh::Mux', autochomp => 1, fn => './fsadfsdfsdf'
+nosh->cli( \@ARGV )

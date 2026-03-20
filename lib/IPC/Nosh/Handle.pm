@@ -29,8 +29,6 @@ sub AUTOLOAD {
     my $invoke = shift;
     my $method = ( $AUTOLOAD =~ s/^.*:://r );
 
-    #$ENV{DEBUG} && warn Dumper( [ caller 0 ], $AUTOLOAD, $invoke, $method );
-
     if ( $invoke isa 'IPC::Nosh::Handle' ) {
         if ( my $charset = $invoke->charset ) {
             $invoke->charset->$method(@_);

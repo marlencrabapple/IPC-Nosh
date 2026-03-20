@@ -11,6 +11,8 @@ use Const::Fast;
 use Data::Dumper::Names;
 use Devel::StackTrace::WithLexicals;
 use PadWalker;
+use IPC::Nosh::Handle;
+
 use base 'Class::Exporter';
 use vars qw'@EXPORT @EXPORT_OK';
 
@@ -33,12 +35,12 @@ method writeh( $line, $handle, %opt ) {
 }
 
 method outh ($line) {
-    state $h = IPC::Nosh::Handle->new( fd => *STDOUT, mode => 'w' );
+    state $h = IPC::Nosh::Handle->new( fd => *STDOUT, mode => '>' );
     $self->writeh( $line, $h );
 }
 
 method errh ($line) {
-    state $h = IPC::Nosh::Handle->new( fd => *STDERR, mode => 'w' );
+    state $h = IPC::Nosh::Handle->new( fd => *STDERR, mode => '>' );
     $self->writeh( $line, $h );
 }
 
