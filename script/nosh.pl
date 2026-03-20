@@ -59,7 +59,7 @@ method nosh ( $asdf = undef, %fdsa ) {
         autoflush => $autoflush,
         autochomp => $autochomp,
     );
-
+    dmsg $run;
 }
 
 method cli : common ($argv = \@ARGV) {

@@ -19,13 +19,13 @@ use IPC::Nosh::Handle;
 const our @EVENTLIST => qw'line eof';
 const our %MUX_DEFAULT => (
     fd        => *STDOUT,
-    mode      => 'w',
+    mode      => ">",
     autochomp => undef,
     autoflush => undef
 );
 
-field $fileno    : reader(fd);        #//= *STDOUT;
-field $mode      : param : reader;    #//= $MUX_DEFAULT{mode};
+field $fileno    : reader(fd);    #//= *STDOUT;
+field $mode      : param : reader //= $MUX_DEFAULT{mode};
 field $autochomp : param : reader //= undef;
 field $autoflush : param : reader //= undef;
 
@@ -73,18 +73,19 @@ ADJUST : params (:$fn //= undef, :$fh //= undef, :$fd //= undef) {
                     }
                 }
             }
-            else {
-                $buff = Stream::Buffered->new();
 
-                push @$handle,
-                  IPC::Nosh::Handle->new(
-                    fh => $buff->rewind,
-                    %handleopt
-                  );
-            }
         }
         elsif ($fd) {
             push @$handle, IO::Nosh::Handle->new( fd => $fd, %handleopt );
+        }
+        else {
+            $buff = Stream::Buffered->new();
+
+            push @$handle,
+              IPC::Nosh::Handle->new(
+                fh => $buff->rewind,
+                %handleopt
+              );
         }
     }
 };
@@ -109,10 +110,17 @@ ADJUST : params (:$on //= {}) {
 };
 
 ADJUST {
-    if ( none { $_ } map { $$callback{$_}->@* } keys %$callback, @$handle ) {
+    if (
+        none { $_ }
+        map  { $$callback->@* }
+        grep { $$callback{$_} isa ARRAY } keys %$callback,
+        @$handle
+      )
+    {
         push @$handle, $default_handle;
     }
-    dmsg $callback, $handle;
+
+    #Q dmsg $callback, $handle;
 }
 
 method mux_default_args : common {
@@ -127,6 +135,7 @@ method PUSH (@list) {
     push @array, map {
         my $line = $_;
         chomp $line if $autochomp;
+
         $_->say($line) for @$handle;
         $self->on_line($line);
         $line
@@ -137,6 +146,7 @@ method PUSH (@list) {
 
 method STORE( $index, $value ) {
     chomp $value if $autochomp;
+
     $_->say($value) for @$handle;
 
     $array[$index] = $value;

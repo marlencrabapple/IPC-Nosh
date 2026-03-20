@@ -50,7 +50,8 @@ ADJUST : params (:$fn //= undef,  :$fh //= undef,  :$fd //= undef) {
     if ($fn) {
 
         # const our %MODE => ( w => '>', 'r' => '<' );
-        $path = path($fn)->filehandle($mode);
+        $path   = path($fn);
+        $handle = $path->filehandle($mode);
     }
     elsif ($fh) {
         $handle = $fh;
@@ -62,5 +63,9 @@ ADJUST : params (:$fn //= undef,  :$fh //= undef,  :$fd //= undef) {
         $fileno = $fd;
     }
 
-    $handle->autoflush
+    $handle->autoflush if $handle
 };
+
+method default_layer : common {
+    $DEFAULT_LAYER;
+}

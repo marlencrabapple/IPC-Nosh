@@ -40,7 +40,7 @@ field $tied : accessor = {};
 ADJUST : params (:$in, :$out, :$err, :$on) {
     foreach my ( $k, $v ) ( in => $in, out => $out, err => $err ) {
         $self->mux_io(
-            $k, $v,
+            $k, $v isa ARRAY ? @$v : [$v],
             autochomp => $global_autochomp,
             autoflush => $global_autoflush,
         );
@@ -81,11 +81,16 @@ method mux_io( $name, $io, %arg ) {
     }
     if ( $io isa ARRAY ) {
         $self->$name = $io;
-        tie @$io, 'IPC::Nosh::Mux', %tieopt;
+        $tied{io}    = $io;
+        $tied{mux}   = tie @$io, 'IPC::Nosh::Mux', %tieopt;
+        $tied{tie}   = tied @$io;
     }
     elsif ( $io isa CODE ) {
         tie $self->$name->@*, 'IPC::Nosh::Mux', %tieopt, on => { line => $io };
         $tied{$name} = $self->$name;
+        $tied{io}    = $io;
+        $tied{mux}   = tie @$io, 'IPC::Nosh::Mux', %tieopt;
+        $tied{tie}   = tied @$io;
     }
     elsif ( $io isa GLOB ) {
         tie $self->$name->@*, 'IPC::Nosh::Mux', %tieopt, fh => $io;
@@ -95,8 +100,7 @@ method mux_io( $name, $io, %arg ) {
         $tied{$name} = [];
         tie $tied{$name}->@*, 'IPC::Nosh::Mux', %tieopt, fh => \"";
     }
-
-    $$tied{$name} = \%tied;
+    $tied{mux} = $$tied{$name} = \%tied;
 
     $tied;
 }
