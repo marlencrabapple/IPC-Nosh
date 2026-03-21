@@ -7,8 +7,6 @@ class IPC::Nosh::Mux;
 use utf8;
 use v5.40;
 
-use vars '@ISA';
-
 use List::Util qw'any none first';
 use Const::Fast;
 use Stream::Buffered;
@@ -112,15 +110,15 @@ ADJUST : params (:$on //= {}) {
 ADJUST {
     if (
         none { $_ }
-        map  { $$callback->@* }
+        grep { dmsg $_; $_ }
+        map  { $$callback{$_}->@* }
         grep { $$callback{$_} isa ARRAY } keys %$callback,
         @$handle
       )
     {
-        push @$handle, $default_handle;
+        #   push @$handle, $default_handle;
     }
 
-    #Q dmsg $callback, $handle;
 }
 
 method mux_default_args : common {
@@ -207,18 +205,18 @@ method TIEARRAY : common ( %opt ) {
         grep { $opt{$_} } qw(on fd sub mode fh fn autochomp autoflush)
     );
 
-    dmsg $self, \%opt;
+    #   dmsg $self, \%opt;
 
     $self;
 }
 
 # TODO: reader methods
 
-method lines ( $name, $lines, %opt ) {
+method lines ( $lines, %opt ) {
     @array;
 }
 
-method lines_utf8 ( $name, $lines, %opt ) {
-    $self->lines( $name, $lines, ( encode => 'UTF-8' ) );
+method lines_utf8 ( $lines = undef, %opt ) {
+    $self->lines( $lines, ( encode => 'UTF-8' ) );
 }
 

@@ -26,90 +26,37 @@ field $global_cb = {};
 field $global_autochomp : param(autochomp) //= 0;
 field $global_autoflush : param(autoflush) //= 0;
 
-field $cmd : param;
+field $in_aref  = [];
+field $out_aref = [];
+field $err_aref = [];
 
-field $in  //= { mode => 'r', fd => [ \undef ] };
-field $out //= { mode => 'w', fd => [] };
-field $err //= { mode => 'w', fd => [] };
+field $cmd : param;
+field $in  : param;
+field $out : param;
+field $err : param;
 
 field $status;
 field $oserr;
 
-field $tied : accessor = {};
+field $tied = {};
 
-ADJUST : params (:$in, :$out, :$err, :$on) {
-    foreach my ( $k, $v ) ( in => $in, out => $out, err => $err ) {
-        $$tied{$k} = $self->mux_io(
-            $k, $v,
-            autochomp => $global_autochomp,
-            autoflush => $global_autoflush,
-        );
+ADJUST {
 
+    my %tieopt = ( autochomp => $global_autochomp, autoflush => 1 );
+
+    foreach my ( $name, $aref )
+      ( 'in', $in_aref, 'out', $out_aref, 'err', $err_aref )
+    {
+        $$tied{$name} = tie @$aref, 'IPC::Nosh::Mux', %tieopt;
     }
-
-    const my @cballow =>
-      qw'line error exiterr nonzero exit eof ipcfail success';
-
-    @$global_cb{@cballow} =
-      map { $$on{$_} isa ARRAY ? $$on{$_}->@* : [ $$on{$_} // () ] }
-      grep { defined $_ } @$global_cb{@cballow};
-};
-
-method in {
-    $$tied{in};
-}
-
-method out {
-    $$tied{out};
-}
-
-method err {
-    $$tied{err};
-}
-
-method mux_io( $name, $io, %arg ) {
-
-    # my %tied;
-    my $tied;
-
-    my %tieopt = %arg{qw'handle autochomp autoflush on'};
-
-    #push $tieopt{on}->@*, $$global_cb{line} if $$global_cb{line};
-
-    if ( $io isa HASH ) {
-
-        # %tieopt = $$io{qw'tieopt'}
-        # my $on = $$io{on};
-        ...;
-    }
-    if ( $io isa ARRAY ) {
-        $tied = tie @$io, 'IPC::Nosh::Mux', %tieopt;
-
-    }
-    elsif ( $io isa CODE ) {
-        my @array;
-        $tied = tie @array, 'IPC::Nosh::Mux', %tieopt, on => { line => $io };
-
-    }
-    elsif ( $io isa GLOB ) {
-        my @array;
-        $tied = tie @array, 'IPC::Nosh::Mux', %tieopt, fh => $io;
-
-    }
-    elsif ( $io isa SCALAR && $$io ) {
-        my @array;
-        $tied = tie @array, 'IPC::Nosh::Mux', %tieopt, fn => $$io;
-
-    }
-
-    # $tied{mux} = $$tied{$name} = \%tied;
-    dmsg( $tied, $tied2 );
-    $tied;
 }
 
 method $run ($cmd) {
+
     try {
-        my $ipcfail = run3( $cmd, $$tied{in}, $$tied{out}, $$tied{err} );
+        my $ipcfail = run3( $cmd, $in_aref, $out_aref, $err_aref );
+
+        #my $ipcfail = run3( $cmd, $$tied{in}, $$tied{out}, $$tied{err} );
 
         ( $status, $oserr ) = ( $?, $! );
 
@@ -135,6 +82,7 @@ method $run ($cmd) {
         ) for $$global_cb{ipcfail}->@*;
     }
 
+    # dmsg $self;
     $self;
 }
 
@@ -145,6 +93,18 @@ sub run ( $cmd, %arg ) {
     );
 
     $nosh->$run($cmd);
+}
+
+method in {
+    $$tied{in};
+}
+
+method out {
+    $$tied{out};
+}
+
+method err {
+    $$tied{err};
 }
 
 __END__

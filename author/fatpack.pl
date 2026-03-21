@@ -96,7 +96,7 @@ sub fatpack {
         my $run =
           run( \@cmd, out => \@fatlines, autoflush => 1, autochomp => 1 );
 
-        dmsg $run;
+        #        dmsg $run;
 
         $fatstr = join "\n", @fatlines;
 
