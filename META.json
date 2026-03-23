@@ -1,5 +1,5 @@
 {
-   "abstract" : "It's new $module",
+   "abstract" : "Flexible no-shell IPC interface with IO muxing",
    "author" : [
       "Ian P Bradley <ian.bradley@studiocrabapple.com>"
    ],
