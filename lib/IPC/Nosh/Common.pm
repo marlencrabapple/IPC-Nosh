@@ -79,8 +79,8 @@ method error ($line) {
     $self->errh("❌️ $line");
 }
 
-method fatal ( $line, $status = $? // 255, %opt ) {
-    $self->err($line);
+method fatal ( $line, $status = ( $? || 255 ), %opt ) {
+    $self->error($line);
     exit $status;
 }
 
