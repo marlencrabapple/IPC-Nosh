@@ -51,12 +51,15 @@ ADJUST {
     }
 }
 
+my class IPCNoshRun {
+    field $runner : param;
+
+};
+
 method $run ($cmd) {
 
     try {
         my $ipcfail = run3( $cmd, $in_aref, $out_aref, $err_aref );
-
-        #my $ipcfail = run3( $cmd, $$tied{in}, $$tied{out}, $$tied{err} );
 
         ( $status, $oserr ) = ( $?, $! );
 
