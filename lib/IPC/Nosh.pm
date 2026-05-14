@@ -20,6 +20,8 @@ use IPC::Nosh::Common;
 use Syntax::Keyword::Try;
 use Syntax::Keyword::Dynamically;
 
+const our @run_arg_allow => qw'in out err on autoflush autochomp';
+
 # name => [ coderef, ... ]
 field $global_cb = {};
 
@@ -40,6 +42,12 @@ field $oserr;
 
 field $tied = {};
 
+field $run_arg_href = {};
+
+# BUILD {
+#     dmsg \@_
+# }
+
 ADJUST {
 
     my %tieopt = ( autochomp => $global_autochomp, autoflush => 1 );
@@ -53,7 +61,19 @@ ADJUST {
 
 my class IPCNoshRun {
     field $runner : param;
+    field $tied   : param;
 
+    method out {
+        $$tied{out};
+    }
+
+    method in () {
+
+    }
+
+    method err () {
+
+    }
 };
 
 method $run ($cmd) {
@@ -64,7 +84,7 @@ method $run ($cmd) {
         ( $status, $oserr ) = ( $?, $! );
 
         if ($ipcfail) {
-            $_->( $self, ret => $ipcfail, args => [ $cmd, $in, $out, $err ] )
+            $_->( $self, ret => $ipcfail, cmd => $cmd, arg => $run_arg_href )
               for $$global_cb{ipcfail}->@*;
         }
 
@@ -79,6 +99,7 @@ method $run ($cmd) {
     }
     else {    # Failure (TODO: look into why some exit codes are over 255)
         $_->(
+
             $self,
             exit => { status => $status, os_errno => $oserr },
             args => [ $cmd, $in, $out, $err ]
@@ -92,7 +113,7 @@ method $run ($cmd) {
 sub run ( $cmd, %arg ) {
     my $nosh = IPC::Nosh->new(
         cmd => $cmd,
-        %arg{qw'in out err on autoflush autochomp'}
+        %arg{@run_arg_key_allow}
     );
 
     $nosh->$run($cmd);
