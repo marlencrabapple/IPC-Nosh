@@ -7,14 +7,19 @@ class IPC::Nosh::Mux;
 use utf8;
 use v5.40;
 
-use List::Util qw'any none first';
+use List::Util qw'any none first all';
 use Const::Fast;
 use Stream::Buffered;
 
 use IPC::Nosh::Common;
 use IPC::Nosh::Handle;
 
-const our @EVENTLIST => qw'line eof';
+# const our @run_arg_allow => qw'in out err on autoflush autochomp';
+
+const our @cb_global_allow => qw'line eof';
+
+# const our @cb_handle_allow => ( @cb_global_allow, qw(in out err) );
+
 const our %MUX_DEFAULT => (
     fd        => *STDOUT,
     mode      => ">",
@@ -90,18 +95,21 @@ ADJUST : params (:$fn //= undef, :$fh //= undef, :$fd //= undef) {
 
 ADJUST : params (:$on //= {}) {
     foreach my ( $e, $val ) (%$on) {
-        if ( none { $e eq $_ } @IPC::Nosh::Mux::EVENTLIST ) {
+        if ( none { $e eq $_ } @IPC::Nosh::Mux::cb_global_allow ) {
             error "'$e' is not a valid key for '\$on'";
             next;
         }
 
         $$callback{$e} //= [];
 
-        if ( $val isa ARRAY ) {
+        if ( ( $val isa ARRAY ) && ( all { $_ isa 'CODE' } @$val ) ) {
             push $$callback{$e}->@*, @$val;
         }
         elsif ( $val isa CODE ) {
             push $$callback{$e}->@*, $val;
+        }
+        else {
+            error "'$e' must be a CODE or an ARRAY of CODE";
         }
     }
 

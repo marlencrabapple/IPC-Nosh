@@ -20,7 +20,11 @@ use IPC::Nosh::Common;
 use Syntax::Keyword::Try;
 use Syntax::Keyword::Dynamically;
 
-const our @run_arg_allow => qw'in out err on autoflush autochomp';
+const our @run_cb_global_allow => qw( success ipcfail error fail nonzero exit);
+
+const our @run_cb_allow => (qw(in out err));
+const our @run_arg_allow => ( @run_cb_allow, qw'autoflush autochomp' )
+  ;    #, @run_cb_global_allow )
 
 # name => [ coderef, ... ]
 field $global_cb = {};
@@ -33,50 +37,77 @@ field $out_aref = [];
 field $err_aref = [];
 
 field $cmd : param;
-field $in  : param;
-field $out : param;
-field $err : param;
+field $in;     #: param;
+field $out;    #: param;
+field $err;    #: param;
 
-field $status;
-field $oserr;
+field $status : reader;
+field $oserr  : reader;
 
 field $tied = {};
 
 field $run_arg_href = {};
 
-# BUILD {
-#     dmsg \@_
-# }
+ADJUST : params ( %arg) {
 
-ADJUST {
+    dmsg \%arg;
 
-    my %tieopt = ( autochomp => $global_autochomp, autoflush => 1 );
+    $run_arg_href = \%arg;
+
+    my %tieopt = (
+        autochomp => $global_autochomp,
+        autoflush => $global_autoflush,
+    );
+
+    $self->add_cb( \%arg, $global_cb,
+        filter => \@IPC::Nosh::run_cb_global_allow );
 
     foreach my ( $name, $aref )
       ( 'in', $in_aref, 'out', $out_aref, 'err', $err_aref )
     {
-        $$tied{$name} = tie @$aref, 'IPC::Nosh::Mux', %tieopt;
+        # my %handle_cb = map { [$name => { ( $_ isa ARRAY ? $_ : [$_] ) ) } }
+        #   %arg{@IPC::Nosh::Mux::cb_handle_allow};
+
+        my %on = ();
+
+        # $self->add_cb( \%arg, \%on, filter => \@IPC::Nosh::run_cb_allow );
+
+        if ( ( $name eq 'in' ) && ( $arg{in} isa 'HASH' ) ) {
+            @on{qw'line eof'} = $arg{in}->@{qw'line eof'};
+        }
+        else {
+            $on{line} = $arg{$name};
+        }
+
+        $$tied{$name} = tie @$aref, 'IPC::Nosh::Mux', %tieopt, on => \%on;
     }
-}
 
-my class IPCNoshRun {
-    field $runner : param;
-    field $tied   : param;
-
-    method out {
-        $$tied{out};
-    }
-
-    method in () {
-
-    }
-
-    method err () {
-
-    }
 };
 
+method add_cb( $in, $dest, %opt ) {
+    $$dest{ $$_[0] } = $$_[1]
+      for map { [ $_ => ( $$in{$_} isa ARRAY ? $_ : [ $$in{$_} ] ) ] }
+      ( $opt{filter} && $opt{filter} isa ARRAY ? $opt{filter}->@* : keys %$in );
+}
+
 method $run ($cmd) {
+
+    # my class IPCNoshRun {
+    #     field $runner : param;
+    #     field $tied   : param;
+
+    #     method out {
+    #         $$tied{out};
+    #     }
+
+    #     method in () {
+
+    #     }
+
+    #     method err () {
+
+    #     }
+    # };
 
     try {
         my $ipcfail = run3( $cmd, $in_aref, $out_aref, $err_aref );
@@ -113,7 +144,7 @@ method $run ($cmd) {
 sub run ( $cmd, %arg ) {
     my $nosh = IPC::Nosh->new(
         cmd => $cmd,
-        %arg{@run_arg_key_allow}
+        %arg{@run_arg_allow}
     );
 
     $nosh->$run($cmd);
@@ -151,7 +182,7 @@ IPC::Nosh - Flexible no-shell IPC interface with IO muxing
         err       => \$err,
         autochomp => 1,
         on        => {
-            line => sub ($line) {
+            out => sub ($line) {
                 my ( $path, undef ) = split /\s/, $line;
                 path($path)->absolute . "\n";
             }

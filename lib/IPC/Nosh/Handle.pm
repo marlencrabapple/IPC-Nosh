@@ -24,7 +24,8 @@ field $path;
 field $mode : param = ">";
 
 sub AUTOLOAD {
-    use Data::Dumper;
+
+    # use Data::Dumper;
     our $AUTOLOAD;
     my $invoke = shift;
     my $method = ( $AUTOLOAD =~ s/^.*:://r );

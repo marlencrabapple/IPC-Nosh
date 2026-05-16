@@ -22,8 +22,8 @@ field $argv  : param;
 field $debug : mutator;
 
 # field $stdin;
-field $autoflush : mutator;
-field $autochomp : mutator;
+field $autoflush : mutator //= 1;
+field $autochomp : mutator //= 1;
 field $verbose   : mutator = 1;
 field @barearg;
 field $cmd : mutator = [];
