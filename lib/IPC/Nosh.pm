@@ -50,7 +50,7 @@ field $run_arg_href = {};
 
 ADJUST : params ( %arg) {
 
-    dmsg \%arg;
+    dmsg $self, \%arg;
 
     $run_arg_href = \%arg;
 
@@ -68,7 +68,7 @@ ADJUST : params ( %arg) {
         # my %handle_cb = map { [$name => { ( $_ isa ARRAY ? $_ : [$_] ) ) } }
         #   %arg{@IPC::Nosh::Mux::cb_handle_allow};
 
-        my %on = ();
+        my %on = ();    #( $arg{on} isa 'HASH' ? $arg{on}->%* : () );
 
         # $self->add_cb( \%arg, \%on, filter => \@IPC::Nosh::run_cb_allow );
 
@@ -76,6 +76,7 @@ ADJUST : params ( %arg) {
             @on{qw'line eof'} = $arg{in}->@{qw'line eof'};
         }
         else {
+            dmsg \%arg, $arg{$name};
             $on{line} = $arg{$name};
         }
 

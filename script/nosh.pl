@@ -39,13 +39,15 @@ ADJUST {    #{ # :params (:$autochomp, :$autoflush) {
         'autoflush!',
         'autochomp!',
         '<>' => sub ($barearg) {
-            push @$cmd, map { split /\s+/, $_ } $barearg;
+            push @$cmd, $barearg    #map { split /\s+/, $_ } $barearg;
         }
     );
 
     foreach my ( $k, $v ) (%clidest) {
-        $self->$k = $v if $v;
+        $self->$k = $v if defined $v;
     }
+
+    dmsg $self, \%clidest
 
 }
 
@@ -53,7 +55,10 @@ method nosh ( $asdf = undef, %fdsa ) {
 
     my $run = run(
         $cmd,
-        out => sub ($line) {
+
+        out => sub ( $line, @ ) {
+
+            # dmsg \@opt;
             say $line;
         },
         autoflush => $autoflush,

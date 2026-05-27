@@ -14,7 +14,7 @@ IPC::Nosh - Flexible no-shell IPC interface with IO muxing
         err       => \$err,
         autochomp => 1,
         on        => {
-            line => sub ($line) {
+            out => sub ($line) {
                 my ( $path, undef ) = split /\s/, $line;
                 path($path)->absolute . "\n";
             }

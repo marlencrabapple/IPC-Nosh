@@ -55,6 +55,9 @@ ADJUST : params (:$fn //= undef, :$fh //= undef, :$fd //= undef) {
 
     );
 
+    # STDOUT->autoflush($autoflush);
+    # STDERR->autoflush($autoflush);
+
     foreach my $to_handle ( $fn, $fh, $fd ) {
         if ($fn) {
             push @$handle,
@@ -94,6 +97,9 @@ ADJUST : params (:$fn //= undef, :$fh //= undef, :$fd //= undef) {
 };
 
 ADJUST : params (:$on //= {}) {
+
+    # dmsg $on;
+
     foreach my ( $e, $val ) (%$on) {
         if ( none { $e eq $_ } @IPC::Nosh::Mux::cb_global_allow ) {
             error "'$e' is not a valid key for '\$on'";
@@ -102,14 +108,17 @@ ADJUST : params (:$on //= {}) {
 
         $$callback{$e} //= [];
 
-        if ( ( $val isa ARRAY ) && ( all { $_ isa 'CODE' } @$val ) ) {
+        if ( ( ref $val eq 'ARRAY' ) && ( all { ref $_ eq 'CODE' } @$val ) ) {
             push $$callback{$e}->@*, @$val;
         }
-        elsif ( $val isa CODE ) {
+        elsif ( ref $val eq 'CODE' ) {
             push $$callback{$e}->@*, $val;
         }
-        else {
-            error "'$e' must be a CODE or an ARRAY of CODE";
+        elsif ($val) {
+
+            # dmsg $e, $val, ref $val, ( $val isa CODE ), ( $val isa 'CODE' ),
+            #   [caller];
+            fatal "'$e' must be a CODE or an ARRAY of CODE";
         }
     }
 
@@ -134,7 +143,9 @@ method mux_default_args : common {
 }
 
 method on_line ( $line, $line_no = undef ) {
-    $self->$_( $line, $line_no ) for $$callback{line}->@*;
+
+    # TODO: Check sub signature for number of args and pass only those
+    $_->( $line, $line_no, $self ) for $$callback{line}->@*;
 }
 
 method PUSH (@list) {

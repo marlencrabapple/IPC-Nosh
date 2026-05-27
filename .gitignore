@@ -9,5 +9,5 @@ MYMETA.*
 .carmel
 local
 fatlib
-bin
+fatpack
 .vscode
