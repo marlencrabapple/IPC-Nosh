@@ -11,8 +11,8 @@ use List::Util qw'any none first all';
 use Const::Fast;
 use Stream::Buffered;
 
-use IPC::Nosh::Common;
-use IPC::Nosh::Handle;
+use IO::Handle::Common;
+use IO::Handle::Common::Handle;
 
 # const our @run_arg_allow => qw'in out err on autoflush autochomp';
 
@@ -34,7 +34,7 @@ field $autoflush : param : reader //= undef;
 
 field $buff : reader //= undef;
 
-field $default_handle = IPC::Nosh::Handle->new(
+field $default_handle = IO::Handle::Common::Handle->new(
     fd   => $MUX_DEFAULT{fd},
     mode => $MUX_DEFAULT{mode}
 );
@@ -61,7 +61,7 @@ ADJUST : params (:$fn //= undef, :$fh //= undef, :$fd //= undef) {
     foreach my $to_handle ( $fn, $fh, $fd ) {
         if ($fn) {
             push @$handle,
-              IPC::Nosh::Handle->new(
+              IO::Handle::Common::Handle->new(
                 fn => $fn,
                 %handleopt
               );
@@ -75,20 +75,24 @@ ADJUST : params (:$fn //= undef, :$fh //= undef, :$fd //= undef) {
                     }
                     elsif ( $fh isa GLOB ) {
                         push @$handle,
-                          IPC::Nosh::Handle->new( fh => $fh, %handleopt );
+                          IO::Handle::Common::Handle->new(
+                            fh => $fh,
+                            %handleopt
+                          );
                     }
                 }
             }
 
         }
         elsif ($fd) {
-            push @$handle, IO::Nosh::Handle->new( fd => $fd, %handleopt );
+            push @$handle,
+              IO::Handle::Common::Handle->new( fd => $fd, %handleopt );
         }
         else {
             $buff = Stream::Buffered->new();
 
             push @$handle,
-              IPC::Nosh::Handle->new(
+              IO::Handle::Common::Handle->new(
                 fh => $buff->rewind,
                 %handleopt
               );

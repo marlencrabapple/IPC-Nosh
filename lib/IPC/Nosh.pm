@@ -16,7 +16,7 @@ use vars '@EXPORT';
 use Const::Fast;
 use IPC::Run3;
 use IPC::Nosh::Mux;
-use IPC::Nosh::Common;
+use IO::Handle::Common;
 use Syntax::Keyword::Try;
 use Syntax::Keyword::Dynamically;
 

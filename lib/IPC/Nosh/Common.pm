@@ -18,11 +18,15 @@ use vars qw'@EXPORT @EXPORT_OK';
 
 @EXPORT = qw(dmsg info success error fatal msg);
 
-field $debug = $ENV{DEBUG} || 1;
+field $debug = $ENV{DEBUG} // 1;
 
 field $ddn_uplvl    : param : accessor = 3;
 field $trace_indent : param : accessor = $ENV{DEBUG_INDENT}     // 1;
 field $skip_frames  : param : accessor = $ENV{DEBUG_SKIPFRAMES} // 1;
+
+field $linestart_info    : param = '▶';
+field $linestart_err     : param = '❌️';
+field $linestart_success : param = '⭕️';
 
 method writeh( $line, $handle, %opt ) {
 
@@ -42,10 +46,6 @@ method outh ($line) {
 method errh ($line) {
     state $h = IPC::Nosh::Handle->new( fd => *STDERR, mode => '>' );
     $self->writeh( $line, $h );
-}
-
-method info ($line) {
-    $self->errh("▶ $line");
 }
 
 const our $ltrimtab_re => qr/^\t/;
@@ -75,8 +75,14 @@ method dmsg {
     $out;
 }
 
+method info ($line) {
+    $line = "$linestart_info $line" if $linestart_info;
+    $self->errh($line);
+}
+
 method error ($line) {
-    $self->errh("❌️ $line");
+    $line = "$linestart_err $line" if $linestart_err;
+    $self->errh($line);
 }
 
 method fatal ( $line, $status = ( $? || 255 ), %opt ) {
@@ -85,7 +91,8 @@ method fatal ( $line, $status = ( $? || 255 ), %opt ) {
 }
 
 method success ($line) {
-    $self->outh("⭕️ $line");
+    $line = "$linestart_success $line" if $linestart_success;
+    $self->outh("$line");
 }
 
 method msg ($line) {

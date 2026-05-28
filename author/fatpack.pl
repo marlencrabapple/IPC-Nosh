@@ -12,7 +12,7 @@ use List::Util 'none';
 use Getopt::Long qw(GetOptionsFromArray :config no_ignore_case auto_abbrev);
 
 use IPC::Nosh;
-use IPC::Nosh::Common;
+use IO::Handle::Common;
 
 our $modroot  = path("./")->absolute;
 our @input    = ( path("$modroot/script")->children );
