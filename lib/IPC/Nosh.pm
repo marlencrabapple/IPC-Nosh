@@ -36,7 +36,7 @@ field $in_aref  = [];
 field $out_aref = [];
 field $err_aref = [];
 
-field $cmd : param;
+field $cmd : param : reader;
 field $in;     #: param;
 field $out;    #: param;
 field $err;    #: param;
