@@ -12,6 +12,7 @@ requires 'Syntax::Keyword::Defer';
 requires 'Object::Pad';
 requires 'Syntax::Keyword::Dynamically';
 requires 'Regexp::Common';
+requires 'Stream::Buffered';
 
 on test => sub {
     requires 'Test::More', '0.96';
