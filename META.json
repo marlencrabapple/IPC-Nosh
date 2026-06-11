@@ -54,6 +54,7 @@
             "Stream::Buffered" : "0",
             "Syntax::Keyword::Defer" : "0",
             "Syntax::Keyword::Dynamically" : "0",
+            "Syntax::Keyword::Try" : "0",
             "perl" : "v5.40.0"
          }
       },

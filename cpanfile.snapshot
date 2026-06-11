@@ -4644,6 +4644,17 @@ DISTRIBUTIONS
       XS::Parse::Keyword 0.13
       XS::Parse::Keyword::Builder 0.13
       perl 5.014
+  Syntax-Keyword-Try-0.31
+    pathname: P/PE/PEVANS/Syntax-Keyword-Try-0.31.tar.gz
+    provides:
+      Syntax::Keyword::Try 0.31
+      Syntax::Keyword::Try::Deparse 0.31
+    requirements:
+      ExtUtils::CBuilder 0
+      Module::Build 0.4004
+      XS::Parse::Keyword 0.35
+      XS::Parse::Keyword::Builder 0.35
+      perl 5.014
   Task-Weaken-1.06
     pathname: E/ET/ETHER/Task-Weaken-1.06.tar.gz
     provides:

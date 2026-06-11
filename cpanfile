@@ -13,6 +13,7 @@ requires 'Object::Pad';
 requires 'Syntax::Keyword::Dynamically';
 requires 'Regexp::Common';
 requires 'Stream::Buffered';
+requires 'Syntax::Keyword::Try';
 
 on test => sub {
     requires 'Test::More', '0.96';
