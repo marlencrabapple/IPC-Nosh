@@ -7,18 +7,14 @@ class IPC::Nosh::Mux;
 use utf8;
 use v5.40;
 
+use Encode qw'encode decode';
 use List::Util qw'any none first all';
 use Const::Fast;
 use Stream::Buffered;
-
 use IO::Handle::Common;
 use IO::Handle::Common::Handle;
 
-# const our @run_arg_allow => qw'in out err on autoflush autochomp';
-
-const our @cb_global_allow => qw'line eof';
-
-# const our @cb_handle_allow => ( @cb_global_allow, qw(in out err) );
+const our @CB_GLOBAL_ALLOW => qw'line eof';
 
 const our %MUX_DEFAULT => (
     fd        => *STDOUT,
@@ -27,7 +23,10 @@ const our %MUX_DEFAULT => (
     autoflush => undef
 );
 
-field $fileno    : reader(fd);    #//= *STDOUT;
+field @array;
+
+field $charset : param = 'UTF-8';
+field $fileno : reader(fd) //= *STDOUT;
 field $mode      : param : reader //= $MUX_DEFAULT{mode};
 field $autochomp : param : reader //= undef;
 field $autoflush : param : reader //= undef;
@@ -40,10 +39,6 @@ field $default_handle = IO::Handle::Common::Handle->new(
 );
 
 field $handle : reader = [];
-
-field @array;
-
-# name => [ coderef, ... ]
 field $callback : accessor(on) //= {};
 
 ADJUST : params (:$fn //= undef, :$fh //= undef, :$fd //= undef) {
@@ -51,12 +46,9 @@ ADJUST : params (:$fn //= undef, :$fh //= undef, :$fd //= undef) {
     my %handleopt = (
         mode      => $mode,
         autochomp => $autochomp,
-        autoflush => $autoflush
-
+        autoflush  => $autoflush,
+          encoding => 'UTF-8'
     );
-
-    # STDOUT->autoflush($autoflush);
-    # STDERR->autoflush($autoflush);
 
     foreach my $to_handle ( $fn, $fh, $fd ) {
         if ($fn) {
@@ -105,7 +97,7 @@ ADJUST : params (:$on //= {}) {
     # dmsg $on;
 
     foreach my ( $e, $val ) (%$on) {
-        if ( none { $e eq $_ } @IPC::Nosh::Mux::cb_global_allow ) {
+        if ( none { $e eq $_ } @IPC::Nosh::Mux::CB_GLOBAL_ALLOW ) {
             error "'$e' is not a valid key for '\$on'";
             next;
         }
@@ -120,8 +112,6 @@ ADJUST : params (:$on //= {}) {
         }
         elsif ($val) {
 
-            # dmsg $e, $val, ref $val, ( $val isa CODE ), ( $val isa 'CODE' ),
-            #   [caller];
             fatal "'$e' must be a CODE or an ARRAY of CODE";
         }
     }
@@ -137,7 +127,7 @@ ADJUST {
         @$handle
       )
     {
-        #   push @$handle, $default_handle;
+        push @$handle, $default_handle;
     }
 
 }
@@ -228,18 +218,25 @@ method TIEARRAY : common ( %opt ) {
         grep { $opt{$_} } qw(on fd sub mode fh fn autochomp autoflush)
     );
 
-    #   dmsg $self, \%opt;
-
     $self;
 }
 
-# TODO: reader methods
-
-method lines ( $lines, %opt ) {
-    @array;
+method lines ( %opt ) {
+    map {
+        $opt{encode} && $opt{encode} ne $charset
+          ? encode( $_, $opt{encode} )
+          : $_
+    } @array;
 }
 
-method lines_utf8 ( $lines = undef, %opt ) {
-    $self->lines( $lines, ( encode => 'UTF-8' ) );
+method lines_utf8 ( %opt ) {
+    $self->lines( encode => 'UTF-8' );
 }
 
+method joined (%opt) {
+    join( $autochomp ? "" : "\n" ), $self->lines(%opt);
+}
+
+method joined_utf8 (%opt) {
+    $self->joined(%opt);
+}

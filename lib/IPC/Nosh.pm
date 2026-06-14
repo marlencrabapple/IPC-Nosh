@@ -20,7 +20,7 @@ use IO::Handle::Common;
 use Syntax::Keyword::Try;
 use Syntax::Keyword::Dynamically;
 
-const our @run_cb_global_allow => qw( success ipcfail error fail nonzero exit);
+const our @run_cb_global_allow => qw(success ipcfail error fail nonzero exit);
 
 const our @run_cb_allow => (qw(in out err));
 const our @run_arg_allow => ( @run_cb_allow, qw'autoflush autochomp' )
@@ -92,26 +92,9 @@ method add_cb( $in, $dest, %opt ) {
 }
 
 method $run ($cmd) {
-
-    # my class IPCNoshRun {
-    #     field $runner : param;
-    #     field $tied   : param;
-
-    #     method out {
-    #         $$tied{out};
-    #     }
-
-    #     method in () {
-
-    #     }
-
-    #     method err () {
-
-    #     }
-    # };
-
     try {
         my $ipcfail = run3( $cmd, $in_aref, $out_aref, $err_aref );
+dmsg $ipcfail;
 
         ( $status, $oserr ) = ( $?, $! );
 
@@ -122,7 +105,8 @@ method $run ($cmd) {
 
     }
     catch ($e) {
-        fatal($e);
+        error($e);
+        dmsg $self;
     }
 
     # Success
@@ -138,7 +122,6 @@ method $run ($cmd) {
         ) for $$global_cb{ipcfail}->@*;
     }
 
-    # dmsg $self;
     $self;
 }
 
