@@ -50,7 +50,7 @@ field $run_arg_href = {};
 
 ADJUST : params ( %arg) {
 
-    dmsg $self, \%arg;
+    # dmsg $self, \%arg;
 
     $run_arg_href = \%arg;
 
@@ -76,7 +76,7 @@ ADJUST : params ( %arg) {
             @on{qw'line eof'} = $arg{in}->@{qw'line eof'};
         }
         else {
-            dmsg \%arg, $arg{$name};
+            # dmsg \%arg, $arg{$name};
             $on{line} = $arg{$name};
         }
 
@@ -94,7 +94,7 @@ method add_cb( $in, $dest, %opt ) {
 method $run ($cmd) {
     try {
         my $ipcfail = run3( $cmd, $in_aref, $out_aref, $err_aref );
-dmsg $ipcfail;
+        dmsg $ipcfail;
 
         ( $status, $oserr ) = ( $?, $! );
 

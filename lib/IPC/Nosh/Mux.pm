@@ -7,7 +7,7 @@ class IPC::Nosh::Mux;
 use utf8;
 use v5.40;
 
-use Encode qw'encode decode';
+use Encode     qw'encode decode';
 use List::Util qw'any none first all';
 use Const::Fast;
 use Stream::Buffered;
@@ -25,8 +25,8 @@ const our %MUX_DEFAULT => (
 
 field @array;
 
-field $charset : param = 'UTF-8';
-field $fileno : reader(fd) //= *STDOUT;
+field $charset   : param = 'UTF-8';
+field $fileno    : reader(fd) //= *STDOUT;
 field $mode      : param : reader //= $MUX_DEFAULT{mode};
 field $autochomp : param : reader //= undef;
 field $autoflush : param : reader //= undef;
@@ -46,8 +46,8 @@ ADJUST : params (:$fn //= undef, :$fh //= undef, :$fd //= undef) {
     my %handleopt = (
         mode      => $mode,
         autochomp => $autochomp,
-        autoflush  => $autoflush,
-          encoding => 'UTF-8'
+        autoflush => $autoflush,
+        encoding  => 'UTF-8'
     );
 
     foreach my $to_handle ( $fn, $fh, $fd ) {
@@ -121,7 +121,6 @@ ADJUST : params (:$on //= {}) {
 ADJUST {
     if (
         none { $_ }
-        grep { dmsg $_; $_ }
         map  { $$callback{$_}->@* }
         grep { $$callback{$_} isa ARRAY } keys %$callback,
         @$handle
@@ -221,7 +220,7 @@ method TIEARRAY : common ( %opt ) {
     $self;
 }
 
-method lines ( %opt ) {
+method lines (%opt) {
     map {
         $opt{encode} && $opt{encode} ne $charset
           ? encode( $_, $opt{encode} )
@@ -229,7 +228,7 @@ method lines ( %opt ) {
     } @array;
 }
 
-method lines_utf8 ( %opt ) {
+method lines_utf8 (%opt) {
     $self->lines( encode => 'UTF-8' );
 }
 
