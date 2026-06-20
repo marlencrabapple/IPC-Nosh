@@ -98,7 +98,7 @@ method $run ($cmd) {
 
         ( $status, $oserr ) = ( $?, $! );
 
-        if ($ipcfail) {
+        if ( $ipcfail != 1 ) {
             $_->( $self, ret => $ipcfail, cmd => $cmd, arg => $run_arg_href )
               for $$global_cb{ipcfail}->@*;
         }
