@@ -2132,6 +2132,7 @@ DISTRIBUTIONS
       IO::Handle::Common 0.01
       IO::Handle::Common::Handle undef
     requirements:
+      Class::Exporter 0
       Const::Fast 0
       Data::Dumper::Names 0
       Devel::StackTrace::WithLexicals 0
@@ -2139,6 +2140,7 @@ DISTRIBUTIONS
       IO::Handle 0
       List::Util 0
       Module::Build::Tiny 0.034
+      Object::Pad 0
       PadWalker 0
       Path::Tiny 0
       perl v5.40.0

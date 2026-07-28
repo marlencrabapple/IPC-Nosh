@@ -1,9 +1,9 @@
 requires 'perl', 'v5.40';
 
 requires 'Const::Fast';
-requires 'IPC::Run3';
+requires 'TOML::Tiny';
+requires 'IPC::Nosh';
 requires 'Path::Tiny';
-requires 'IO::Handle';
 requires 'IO::Handle::Common';
 requires 'Data::Dumper::Names';
 requires 'Devel::StackTrace::WithLexicals';

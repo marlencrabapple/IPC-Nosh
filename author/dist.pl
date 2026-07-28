@@ -6,42 +6,122 @@ no warnings 'experimental::re_strict';
 use re 'strict';
 
 use Path::Tiny;
+use Const::Fast;
 use TOML::Tiny qw'from_toml to_toml';
 use CPAN::Mini::Inject;
 use IPC::Nosh;
+use Syntax::Keyword::Defer;
+use Syntax::Keyword::Try;
 use IO::Handle::Common;
 use Getopt::Long
   qw(GetOptionsFromArray :config no_ignore_case auto_abbrev passthrough bundling long_prefix_pattern=--?);
+use JSON::MaybeXS;
 
-my $verbose            = $ENV{VERBOSE};
-my $debug              = $ENV{DEBUG};
-my $author_config_file = path("minil.toml");
-my $author_config      = from_toml( $author_config_file->slurp_utf8 );
-my $package            = ( $$author_config{name} =~ s/-/::/gr );
-my $archive;
-my $version;
+const our $toml => TOML::Tiny->new;
 
-my $trial = grep { $_ eq '--trial' } @ARGV;
-$trial //= $$author_config{release_status} ne 'stable' ? 1 : 0;
+our $verbose = $ENV{VERBOSE} // 9;
+our $debug   = $ENV{DEBUG}   // 0;
 
-my $has_suffix;
+our %config_path = ( meta => path('META.json'), author => path('dist.ini') );
+our $config = { meta => decode_json($config_path{meta}->slurp_utf8) };
 
-my $dist_suffix;
-$dist_suffix = 'TRIAL' if $trial;
+our $package;
+our $archive;
+our $version;
 
-dmsg $author_config, $package, $trial, $dist_suffix;
+our $trial;
+
+our $has_suffix;
+
+const our $dist_suffix_default => 'TRIAL';
+our $dist_suffix;
+$dist_suffix = $dist_suffix_default if $trial;
+
+sub cli ( $argv = \@ARGV, %opt ) {
+
+    GetOptionsFromArray(
+        $argv,
+        'trial' => \$trial,
+        'verbose+',
+        => \$verbose,
+        'debug+',
+        => \$debug,
+        'quiet' => sub {
+            $verbose = 0;
+        }
+    );
+
+    $$config{author} = parse_ini($config_path{author});
+
+    $package = ( $$config{meta}->{name} =~ s/-/::/gr );
+
+    my $trial //= $$config{author}->{release_status}
+      && $$config{author}->{release_status} ne 'stable' ? 1 : 0;
+
+    $dist_suffix //= $dist_suffix_default if $trial;
+}
+
+sub parse_ini ($file) {
+    my %data = ();
+    my $section;
+
+    foreach my $line ($file->lines_utf8) {
+	if($line =~ /^\[(.+)\]$/) {
+		my $section = $1;
+		$data{$1} = {};
+		next
+	}
+
+	my ($k, $v) = split '=', $line;
+	
+	$section ? $data{$section}{$k} = $v : $data{$k} = $v;
+    }
+
+    \%data
+}
+
+sub mvdir ( $src, $dst, %opt ) {
+    $dst->mkdir unless $dst->is_dir;
+
+    my $onvisit = sub ( $path, $state ) {
+
+        if ( $path->is_dir ) {
+            $dst->mkdir($path);
+            $path->remove_tree if scalar $path->children == 0;
+            return;
+        }
+        else {
+            $path->copy($dst);
+            $path->remove;
+        }
+    };
+
+    $src->visit( $onvisit, { recurse => 1 } );
+    $src->remove_tree;
+}
 
 sub make_dist( $dist, %opt ) {
     my ( $archive, $version, $has_suffix );
     my $test = 0;
 
+    my $bindir = path('./bin');
+    my $tmp;
+
+    if ( $bindir->is_dir ) {
+        info "Temporarily relocating './bin' to avoid conflict with Minilla";
+
+        $tmp = Path::Tiny->tempdir;
+
+        mvdir( $bindir, $tmp );
+
+    }
+
+    const my $archive_re => qr/^\[DZ\] writing archive to (($dist)-(.+?)(?:-(TRIAL))?\.tar\.gz)$/;
+
     my $run = run(
-        [ qw'minil dist', @ARGV ],
+        [qw'milla build', ($trial ? '--trial' : ())],
         out => sub ( $line, @ ) {
             $test++;
-            my $archive_re = qr /^Wrote (($dist)-(.+?)(?:-(TRIAL))?\.tar\.gz)$/;
-
-            dmsg $line, $dist, $archive_re, $test;    #\@arg;
 
             if ($verbose) {
                 my $say = $debug ? __LINE__ . ": $line" : $line;
@@ -57,7 +137,9 @@ sub make_dist( $dist, %opt ) {
         autochomp => 1
     );
 
-    dmsg $archive, $version, $has_suffix, $test;
+    mvdir( $tmp, $bindir ) if $tmp;
+
+    dmsg $run, $archive, $version, $has_suffix, $test;
 
     say join "\n", $run->err->lines_utf8 if $verbose;
 
@@ -74,6 +156,10 @@ sub make_dist( $dist, %opt ) {
     ( $archive, $version, $has_suffix );
 }
 
+sub make_build () {
+
+}
+
 sub rename_archive ( $src, $dst ) {
     $archive->move($dst);
 }
@@ -85,9 +171,7 @@ sub upload_to_cpanm {
 sub dist {
 
     ( $archive, $version, $has_suffix ) =
-      make_dist( $$author_config{name}, trial => $trial );
-
-    dmsg( $archive, $version, $has_suffix );
+      make_dist( $package, trial => $trial );
 
     $archive = path($archive);
 
@@ -110,4 +194,5 @@ sub dist {
     }
 }
 
+cli( \@ARGV );
 dist()

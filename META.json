@@ -4,7 +4,7 @@
       "Ian P Bradley <ian.bradley@studiocrabapple.com>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Dist::Milla version v1.0.22, Dist::Zilla version 6.037, CPAN::Meta::Converter version 2.150010",
+   "generated_by" : "Dist::Milla version v1.0.22, Dist::Zilla version 6.037, CPAN::Meta::Converter version 2.150013",
    "license" : [
       "perl_5"
    ],
@@ -45,9 +45,8 @@
             "Const::Fast" : "0",
             "Data::Dumper::Names" : "0",
             "Devel::StackTrace::WithLexicals" : "0",
-            "IO::Handle" : "0",
             "IO::Handle::Common" : "0",
-            "IPC::Run3" : "0",
+            "IPC::Nosh" : "0",
             "Object::Pad" : "0",
             "Path::Tiny" : "0",
             "Regexp::Common" : "0",
@@ -55,6 +54,7 @@
             "Syntax::Keyword::Defer" : "0",
             "Syntax::Keyword::Dynamically" : "0",
             "Syntax::Keyword::Try" : "0",
+            "TOML::Tiny" : "0",
             "perl" : "v5.40.0"
          }
       },
@@ -79,8 +79,8 @@
       }
    },
    "version" : "0.01",
-   "x_generated_by_perl" : "v5.42.2",
-   "x_serialization_backend" : "Cpanel::JSON::XS version 4.40",
+   "x_generated_by_perl" : "v5.44.0",
+   "x_serialization_backend" : "Cpanel::JSON::XS version 4.43",
    "x_spdx_expression" : "Artistic-1.0-Perl OR GPL-1.0-or-later",
    "x_static_install" : 1
 }
