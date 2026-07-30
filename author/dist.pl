@@ -23,7 +23,7 @@ our $verbose = $ENV{VERBOSE} // 9;
 our $debug   = $ENV{DEBUG}   // 0;
 
 our %config_path = ( meta => path('META.json'), author => path('dist.ini') );
-our $config = { meta => decode_json($config_path{meta}->slurp_utf8) };
+our $config      = { meta => decode_json( $config_path{meta}->slurp_utf8 ) };
 
 our $package;
 our $archive;
@@ -51,7 +51,7 @@ sub cli ( $argv = \@ARGV, %opt ) {
         }
     );
 
-    $$config{author} = parse_ini($config_path{author});
+    $$config{author} = parse_ini( $config_path{author} );
 
     $package = ( $$config{meta}->{name} =~ s/-/::/gr );
 
@@ -65,19 +65,19 @@ sub parse_ini ($file) {
     my %data = ();
     my $section;
 
-    foreach my $line ($file->lines_utf8) {
-	if($line =~ /^\[(.+)\]$/) {
-		my $section = $1;
-		$data{$1} = {};
-		next
-	}
+    foreach my $line ( $file->lines_utf8 ) {
+        if ( $line =~ /^\[(.+)\]$/ ) {
+            my $section = $1;
+            $data{$1} = {};
+            next;
+        }
 
-	my ($k, $v) = split '=', $line;
-	
-	$section ? $data{$section}{$k} = $v : $data{$k} = $v;
+        my ( $k, $v ) = split /=/, $line;
+
+        $section ? $data{$section}{$k} = $v : $data{$k} = $v;
     }
 
-    \%data
+    \%data;
 }
 
 sub mvdir ( $src, $dst, %opt ) {
@@ -116,10 +116,11 @@ sub make_dist( $dist, %opt ) {
 
     }
 
-    const my $archive_re => qr/^\[DZ\] writing archive to (($dist)-(.+?)(?:-(TRIAL))?\.tar\.gz)$/;
+    const my $archive_re =>
+      qr/^\[DZ\] writing archive to (($dist)-(.+?)(?:-(TRIAL))?\.tar\.gz)$/;
 
     my $run = run(
-        [qw'milla build', ($trial ? '--trial' : ())],
+        [ qw'milla build', ( $trial ? '--trial' : () ) ],
         out => sub ( $line, @ ) {
             $test++;
 
