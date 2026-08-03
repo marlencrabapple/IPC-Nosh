@@ -7,7 +7,6 @@ use re 'strict';
 
 use Path::Tiny;
 use Const::Fast;
-use TOML::Tiny qw'from_toml to_toml';
 use CPAN::Mini::Inject;
 use IPC::Nosh;
 use Syntax::Keyword::Defer;
@@ -17,14 +16,13 @@ use Getopt::Long
   qw(GetOptionsFromArray :config no_ignore_case auto_abbrev passthrough bundling long_prefix_pattern=--?);
 use JSON::MaybeXS;
 
-const our $toml => TOML::Tiny->new;
-
 our $verbose = $ENV{VERBOSE} // 9;
 our $debug   = $ENV{DEBUG}   // 0;
 
 our %config_path = ( meta => path('META.json'), author => path('dist.ini') );
 our $config      = { meta => decode_json( $config_path{meta}->slurp_utf8 ) };
 
+our $distname = $config->{meta}{name};
 our $package;
 our $archive;
 our $version;
@@ -53,7 +51,7 @@ sub cli ( $argv = \@ARGV, %opt ) {
 
     $$config{author} = parse_ini( $config_path{author} );
 
-    $package = ( $$config{meta}->{name} =~ s/-/::/gr );
+    $package = ( $config->{meta}{name} =~ s/-/::/gr );
 
     my $trial //= $$config{author}->{release_status}
       && $$config{author}->{release_status} ne 'stable' ? 1 : 0;
@@ -115,9 +113,8 @@ sub make_dist( $dist, %opt ) {
         mvdir( $bindir, $tmp );
 
     }
-
     const my $archive_re =>
-      qr/^\[DZ\] writing archive to (($dist)-(.+?)(?:-(TRIAL))?\.tar\.gz)$/;
+qr/^\[DZ\] writing archive to (($distname)-(.+?)?(?:-(TRIAL))?\.tar\.gz)$/;
 
     my $run = run(
         [ qw'milla build', ( $trial ? '--trial' : () ) ],
@@ -172,7 +169,7 @@ sub upload_to_cpanm {
 sub dist {
 
     ( $archive, $version, $has_suffix ) =
-      make_dist( $package, trial => $trial );
+      make_dist( $distname, trial => $trial );
 
     $archive = path($archive);
 
