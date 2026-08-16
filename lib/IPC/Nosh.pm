@@ -6,7 +6,7 @@ class IPC::Nosh;
 
 use v5.40;
 
-our $VERSION = "0.01.1";
+our $VERSION = "0.01.2";
 
 use parent 'Exporter';
 use vars '@EXPORT';

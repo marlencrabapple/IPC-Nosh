@@ -2,6 +2,9 @@ Revision history for IPC-Nosh
 
 {{$NEXT}}
 
+0.01.2  2026-08-15 21:09:07 PDT
+	- lib/IPC/Nosh.pm: Remove default handler(s) in `run` if set by user
+
 0.01.1  2026-08-02 19:12:39 PDT
 
         - Initial release
