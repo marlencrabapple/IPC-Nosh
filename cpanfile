@@ -1,12 +1,9 @@
 requires 'perl', 'v5.40';
 
 requires 'Const::Fast';
-requires 'TOML::Tiny';
-requires 'IPC::Nosh';
+requires 'IPC::Run3';
 requires 'Path::Tiny';
 requires 'IO::Handle::Common';
-requires 'Data::Dumper::Names';
-requires 'Devel::StackTrace::WithLexicals';
 requires 'Class::Exporter';
 requires 'Syntax::Keyword::Defer';
 requires 'Object::Pad';
@@ -25,7 +22,6 @@ on develop => sub {
     requires 'Perl::Critic';
     requires 'Perl::Critic::Community';
     requires 'Perl::Tidy';
-    requires 'Carmel';
-    requires 'Dist::Milla';
+    requires 'Dist::Milla'
 }
 
