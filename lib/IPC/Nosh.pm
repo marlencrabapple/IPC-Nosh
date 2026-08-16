@@ -94,7 +94,8 @@ method add_cb( $in, $dest, %opt ) {
 method $run ($cmd) {
     try {
         my $ipcfail = run3( $cmd, $in_aref, $out_aref, $err_aref );
-        dmsg $ipcfail;
+
+        # dmsg $ipcfail;
 
         ( $status, $oserr ) = ( $?, $! );
 
@@ -132,6 +133,7 @@ sub run ( $cmd, %arg ) {
     );
 
     $nosh->$run($cmd);
+    $nosh;
 }
 
 method in {

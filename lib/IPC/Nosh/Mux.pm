@@ -122,10 +122,12 @@ ADJUST {
     if (
         none { $_ }
         map  { $$callback{$_}->@* }
-        grep { $$callback{$_} isa ARRAY } keys %$callback,
+        grep { ref $$callback{$_} && ref $$callback{$_} eq 'ARRAY' }
+        keys %$callback,
         @$handle
       )
     {
+        # dmsg $self;
         push @$handle, $default_handle;
     }
 
