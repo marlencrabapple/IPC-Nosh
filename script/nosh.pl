@@ -32,7 +32,7 @@ ADJUST {    #{ # :params (:$autochomp, :$autoflush) {
     my %clidest = ( cmd => $cmd );
 
     GetOptionsFromArray(
-        $argv, \%clidest, 'cmd=s{,}',
+        $argv, \%clidest, 'cmd:s@',
         'verbose+',
         'version',
         'help|?', 'debug+',    #'stdin'

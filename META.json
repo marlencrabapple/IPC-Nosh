@@ -42,7 +42,7 @@
          "requires" : {
             "Class::Exporter" : "0",
             "Const::Fast" : "0",
-            "IO::Handle::Common" : "0",
+            "IO::Handle::Common" : "v0.1.1",
             "IPC::Run3" : "0",
             "Object::Pad" : "0",
             "Path::Tiny" : "0",

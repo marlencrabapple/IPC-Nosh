@@ -49,9 +49,6 @@ field $tied = {};
 field $run_arg_href = {};
 
 ADJUST : params ( %arg) {
-
-    # dmsg $self, \%arg;
-
     $run_arg_href = \%arg;
 
     my %tieopt = (
@@ -107,18 +104,23 @@ method $run ($cmd) {
     }
     catch ($e) {
         error($e);
+        $status = 500;
         dmsg $self;
     }
 
     # Success
-    if ( $status == 0 ) {
+    if ( $status && $status == 0 ) {
         $_->($status) for $global_cb->{success}->@*;
     }
     else {    # Failure (TODO: look into why some exit codes are over 255)
         $_->(
 
             $self,
-            exit => { status => $status, os_errno => $oserr },
+            exit => {
+                status_raw => $status,
+                status     => $status,
+                os_errno   => $oserr
+              },
             args => [ $cmd, $in, $out, $err ]
         ) for $$global_cb{ipcfail}->@*;
     }

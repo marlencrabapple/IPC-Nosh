@@ -1,6 +1,7 @@
 Revision history for IPC-Nosh
 
 {{$NEXT}}
+	- Release to attenuate version comparison issues
 
 0.01.3  2026-08-15 22:08:12 PDT
         - cpanfile: remove accidental dependency on self
