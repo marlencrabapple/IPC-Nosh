@@ -77,7 +77,9 @@ ADJUST : params ( %arg) {
             $on{line} = $arg{$name};
         }
 
-        $$tied{$name} = tie @$aref, 'IPC::Nosh::Mux', %tieopt, on => \%on;
+        $$tied{$name} = tie @$aref, 'IPC::Nosh::Mux', %tieopt,
+          on   => \%on,
+          self => $self;
     }
 
 };
@@ -120,7 +122,7 @@ method $run ($cmd) {
                 status_raw => $status,
                 status     => $status,
                 os_errno   => $oserr
-              },
+            },
             args => [ $cmd, $in, $out, $err ]
         ) for $$global_cb{ipcfail}->@*;
     }

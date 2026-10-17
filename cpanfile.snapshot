@@ -2098,10 +2098,10 @@ DISTRIBUTIONS
       Exporter 5.57
       ExtUtils::MakeMaker 0
       perl 5.008
-  IO-Handle-Common-0.01_2-TRIAL
-    pathname: C/CR/CRABAPP/IO-Handle-Common-0.01_2-TRIAL.tar.gz
+  IO-Handle-Common-0.01_3-TRIAL
+    pathname: C/CR/CRABAPP/IO-Handle-Common-0.01_3-TRIAL.tar.gz
     provides:
-      IO::Handle::Common 0.01_2
+      IO::Handle::Common 0.01_3
       IO::Handle::Common::Base undef
       IO::Handle::Common::Handle undef
     requirements:

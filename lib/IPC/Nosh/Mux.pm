@@ -5,9 +5,10 @@ package IPC::Nosh::Mux;
 class IPC::Nosh::Mux;
 
 use utf8;
-use v5.40;
+use v5.44;
 
-use Encode     qw'encode decode';
+use Encode qw'encode decode';
+use Unicode::UTF8;
 use List::Util qw'any none first all';
 use Const::Fast;
 use Stream::Buffered;
@@ -25,6 +26,7 @@ const our %MUX_DEFAULT => (
 
 field @array;
 
+field $nosh      : param('self');
 field $charset   : param = 'UTF-8';
 field $fileno    : reader(fd) //= *STDOUT;
 field $mode      : param : reader //= $MUX_DEFAULT{mode};
@@ -93,9 +95,6 @@ ADJUST : params (:$fn //= undef, :$fh //= undef, :$fd //= undef) {
 };
 
 ADJUST : params (:$on //= {}) {
-
-    # dmsg $on;
-
     foreach my ( $e, $val ) (%$on) {
         if ( none { $e eq $_ } @IPC::Nosh::Mux::CB_GLOBAL_ALLOW ) {
             error "'$e' is not a valid key for '\$on'";
@@ -127,7 +126,6 @@ ADJUST {
         @$handle
       )
     {
-        # dmsg $self;
         push @$handle, $default_handle;
     }
 
@@ -140,15 +138,15 @@ method mux_default_args : common {
 method on_line ( $line, $line_no = undef ) {
 
     # TODO: Check sub signature for number of args and pass only those
-    $_->( $line, $line_no, $self ) for $$callback{line}->@*;
+    $_->( $line, no => $line_no, mux => $self, self => $nosh )
+      for $$callback{line}->@*;
 }
 
 method PUSH (@list) {
     push @array, map {
         my $line = $_;
         chomp $line if $autochomp;
-
-        $_->say($line) for @$handle;
+        $_->print($line) for @$handle;
         $self->on_line($line);
         $line
     } @list;

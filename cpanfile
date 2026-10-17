@@ -4,8 +4,8 @@ requires 'Const::Fast';
 requires 'IPC::Run3';
 requires 'Path::Tiny';
 
-requires 'IO::Handle::Common', '0.01_2',
-  dist => "CRABAPP/IO-Handle-Common-0.01_2-TRIAL.tar.gz";
+requires 'IO::Handle::Common', '0.01_3',
+  dist => "CRABAPP/IO-Handle-Common-0.01_3-TRIAL.tar.gz";
 
 requires 'Class::Exporter';
 requires 'Syntax::Keyword::Defer';
