@@ -26,7 +26,7 @@ const our %MUX_DEFAULT => (
 
 field @array;
 
-field $nosh      : param('self');
+field $nosh      : param(self);
 field $charset   : param = 'UTF-8';
 field $fileno    : reader(fd) //= *STDOUT;
 field $mode      : param : reader //= $MUX_DEFAULT{mode};
@@ -214,7 +214,7 @@ method DELETE ($index) {
 method TIEARRAY : common ( %opt ) {
     my $self = $class->new(
         map  { ( $_ => $opt{$_} ) }
-        grep { $opt{$_} } qw(on fd sub mode fh fn autochomp autoflush)
+        grep { $opt{$_} } qw(on fd sub mode fh fn autochomp autoflush self)
     );
 
     $self;

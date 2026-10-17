@@ -79,7 +79,7 @@ ADJUST : params ( %arg) {
 
         $$tied{$name} = tie @$aref, 'IPC::Nosh::Mux', %tieopt,
           on   => \%on,
-          self => $self;
+          self=> $self;
     }
 
 };
