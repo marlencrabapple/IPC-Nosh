@@ -6,6 +6,7 @@ use v5.40;
 use lib 'lib';
 
 use Fcntl qw'S_IXUSR S_IXGRP S_IXOTH S_IRUSR S_IRGRP S_IROTH';
+use Cwd 'abs_path';
 use File::chdir;
 use Path::Tiny;
 use List::Util 'none';
@@ -14,9 +15,9 @@ use Getopt::Long qw(GetOptionsFromArray :config no_ignore_case auto_abbrev);
 use IPC::Nosh;
 use IO::Handle::Common;
 
-our $modroot  = path("./")->absolute;
+our $modroot  = path(abs_path);
 our @input    = ( path("$modroot/script")->children );
-our $outdir   = path('./fatpack');
+our $outdir   = path('./bin');
 our $outfn    = '%s';
 our $locallib = path("$modroot/local");
 our $verbose  = 1;
@@ -63,10 +64,10 @@ GetOptions(
     => sub {
         $patharg->( shift, dest => \@input );
     },
-    'outdir|fatpack-out=s',
-    'outfn|outfname|out-filename|fnfmt|fmtfn|fmt-filename|fmt-outputfn=s',
-    'modroot|module-root|module-dir=s',
-    'locallib=s{,}',
+    'outdir|outdest|fatdest|fatpack-out:s',
+    'outfn|outfname|out-filename|fnfmt|fmtfn|fmt-filename|fmt-outputfn:s',
+    'modroot|module-root|module-dir:s',
+    'locallib:s@',
     'verbose+',
     'debug',
     '<>' => sub ($in) { $patharg->( $in, dest => \@input ) }
@@ -87,7 +88,6 @@ sub fatpack {
 
     $outdir->mkdir unless -d $outdir;
     dmsg(@input);
-
     foreach my $in ( map { $_->is_dir ? ( $_->children ) : $_ } @input ) {
 
         #fatpack($in->children) if $in->is_dir;
@@ -95,12 +95,10 @@ sub fatpack {
         my $fatstr  = "";
         my @cmd     = ( qw(fatpack pack), $in );
 
-        # binmode STDERR, ":encoding(UTF-8)";
-        info( "Running `" . ( join " ", @cmd ) . '`' );
+        binmode STDERR, ":encoding(UTF-8)";
+        info( "Running " . join " ", @cmd );
 
         my $run = run( \@cmd, out => $fatline, autochomp => 1 );
-
-        #dmsg($run);
 
         $fatstr = join "\n", $run->out->lines_utf8;
 

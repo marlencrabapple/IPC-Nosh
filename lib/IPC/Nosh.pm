@@ -6,7 +6,7 @@ class IPC::Nosh;
 
 use v5.40;
 
-our $VERSION = "0.01.4";
+our $VERSION = "0.01_04";
 
 use parent 'Exporter';
 use vars '@EXPORT';
@@ -79,7 +79,7 @@ ADJUST : params ( %arg) {
 
         $$tied{$name} = tie @$aref, 'IPC::Nosh::Mux', %tieopt,
           on   => \%on,
-          self=> $self;
+          self => $self;
     }
 
 };

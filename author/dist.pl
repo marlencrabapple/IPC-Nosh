@@ -107,12 +107,10 @@ sub make_dist( $dist, %opt ) {
 
     if ( $bindir->is_dir ) {
         info "Temporarily relocating './bin' to avoid conflict with Minilla";
-
         $tmp = Path::Tiny->tempdir;
-
         mvdir( $bindir, $tmp );
-
     }
+    
     const my $archive_re =>
 qr/^\[DZ\] writing archive to (($distname)-(.+?)?(?:-(TRIAL))?\.tar\.gz)$/;
 
@@ -127,8 +125,7 @@ qr/^\[DZ\] writing archive to (($distname)-(.+?)?(?:-(TRIAL))?\.tar\.gz)$/;
             }
 
             # TODO: Add functionality to remove callback when no longer needed
-            ( $archive, undef, $version, $has_suffix ) =
-              ( $line =~ $archive_re )
+            ( $archive, undef, $version, undef ) = ( $line =~ $archive_re )
               unless $archive && $version;
         },
         err       => sub ( $line, @ ) { say STDERR $line if $verbose },
@@ -150,6 +147,11 @@ qr/^\[DZ\] writing archive to (($distname)-(.+?)?(?:-(TRIAL))?\.tar\.gz)$/;
       . ( join " ", $run->cmd->@* )
       . "' output."
       unless $archive && $version;
+
+    $archive =
+      path($archive)
+      ->move( ( $archive =~ s/\.tar\.gz$/-$dist_suffix_default.tar.gz/rg ) )
+      if $trial;
 
     ( $archive, $version, $has_suffix );
 }
